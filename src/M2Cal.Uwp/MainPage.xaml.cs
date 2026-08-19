@@ -29,7 +29,15 @@ namespace M2Cal.Uwp
 
         public MainPage()
         {
-            InitializeComponent();
+            try
+            {
+                InitializeComponent();
+            }
+            catch (Exception ex)
+            {
+                App.Log("MainPage.InitializeComponent", ex);
+                throw;
+            }
 
             PointsList.ItemsSource = _rows;
             _rows.CollectionChanged += (s, e) => UpdateStatus();

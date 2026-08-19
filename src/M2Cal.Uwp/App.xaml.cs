@@ -12,21 +12,49 @@ namespace M2Cal.Uwp
         {
             InitializeComponent();
             Suspending += OnSuspending;
+            UnhandledException += (s, e) => Log("UnhandledException", e.Exception);
         }
 
         protected override void OnLaunched(LaunchActivatedEventArgs e)
         {
-            if (!(Window.Current.Content is Frame rootFrame))
+            try
             {
-                rootFrame = new Frame();
-                rootFrame.NavigationFailed += OnNavigationFailed;
-                Window.Current.Content = rootFrame;
+                if (!(Window.Current.Content is Frame rootFrame))
+                {
+                    rootFrame = new Frame();
+                    rootFrame.NavigationFailed += OnNavigationFailed;
+                    Window.Current.Content = rootFrame;
+                }
+
+                if (!e.PrelaunchActivated && rootFrame.Content == null)
+                    rootFrame.Navigate(typeof(MainPage), e.Arguments);
+
+                Window.Current.Activate();
             }
+            catch (System.Exception ex)
+            {
+                Log("OnLaunched", ex);
+                throw;
+            }
+        }
 
-            if (!e.PrelaunchActivated && rootFrame.Content == null)
-                rootFrame.Navigate(typeof(MainPage), e.Arguments);
+        /// <summary>
+        /// Zapisuje wyjątek startowy do LocalState. Bez tego awaria przy uruchomieniu widać
+        /// wyłącznie jako kod wyjątku CLR w dzienniku zdarzeń, bez stosu wywołań.
+        /// </summary>
+        internal static void Log(string stage, System.Exception ex)
+        {
+            try
+            {
+                string path = System.IO.Path.Combine(
+                    Windows.Storage.ApplicationData.Current.LocalFolder.Path, "startup-error.txt");
 
-            Window.Current.Activate();
+                System.IO.File.AppendAllText(path, $"[{stage}] {ex}\n\n");
+            }
+            catch (System.Exception)
+            {
+                // logowanie awarii nie może wywołać kolejnej awarii
+            }
         }
 
         private void OnNavigationFailed(object sender, NavigationFailedEventArgs e)

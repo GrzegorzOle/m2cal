@@ -117,6 +117,13 @@ MSBuild motu-m2-cal.sln -p:Configuration=Release -p:Platform=x64 -t:Restore
 MSBuild motu-m2-cal.sln -p:Configuration=Release -p:Platform=x64
 ```
 
+**GUI uruchamia się przez F5 z Visual Studio.** Ręczna rejestracja zbudowanego
+układu (`Add-AppxPackage -Register bin\x64\Debug\AppxManifest.xml`) instaluje
+pakiet poprawnie — kontener powstaje, zależności frameworkowe się rozwiązują —
+ale aplikacja ginie przy starcie z `FileNotFoundException: System.Private.CoreLib`,
+zanim ruszy jakikolwiek kod zarządzany. Dotyczy to zarówno Debug, jak i Release.
+Deploy z Visual Studio tego problemu nie ma.
+
 Rdzeń i CLI budują się także zwykłym `dotnet` — bez Visual Studio i poza Windows:
 
 ```

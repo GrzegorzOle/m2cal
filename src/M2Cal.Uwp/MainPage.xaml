@@ -1,0 +1,220 @@
+<Page
+    x:Class="M2Cal.Uwp.MainPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:vm="using:M2Cal.Uwp.ViewModels"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    mc:Ignorable="d"
+    Background="{ThemeResource ApplicationPageBackgroundThemeBrush}">
+
+    <Page.Resources>
+        <Style x:Key="SectionHeader" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="13" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="Opacity" Value="0.7" />
+            <Setter Property="Margin" Value="0,0,0,8" />
+        </Style>
+        <Style x:Key="FieldLabel" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="Opacity" Value="0.65" />
+            <Setter Property="Margin" Value="0,0,0,2" />
+        </Style>
+    </Page.Resources>
+
+    <Grid Padding="20">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="380" />
+            <ColumnDefinition Width="*" />
+        </Grid.ColumnDefinitions>
+
+        <!-- ── Tor audio ─────────────────────────────────────────────────── -->
+        <StackPanel Grid.Row="0" Grid.ColumnSpan="2" Margin="0,0,0,16">
+            <TextBlock Text="TOR AUDIO" Style="{StaticResource SectionHeader}" />
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <ComboBox x:Name="DeviceBox"
+                          Grid.Column="0"
+                          HorizontalAlignment="Stretch"
+                          PlaceholderText="wybierz urządzenie odtwarzające"
+                          SelectionChanged="OnDeviceSelectionChanged" />
+                <Button Grid.Column="1" Content="Odśwież" Margin="8,0,0,0" Click="OnRefreshDevices" />
+                <Button Grid.Column="2" Content="Otwórz tor" Margin="8,0,0,0" Click="OnOpenDevice" />
+            </Grid>
+            <TextBlock x:Name="DeviceStatus"
+                       Margin="0,8,0,0"
+                       FontFamily="Consolas"
+                       FontSize="12"
+                       TextWrapping="Wrap"
+                       Text="tor nieotwarty" />
+        </StackPanel>
+
+        <!-- ── Bodziec i pomiar ──────────────────────────────────────────── -->
+        <ScrollViewer Grid.Row="1" Grid.Column="0" Margin="0,0,20,0" VerticalScrollBarVisibility="Auto">
+            <StackPanel>
+                <TextBlock Text="BODZIEC" Style="{StaticResource SectionHeader}" />
+
+                <TextBlock Text="Częstotliwość [Hz]" Style="{StaticResource FieldLabel}" />
+                <TextBox x:Name="FrequencyBox" Text="1000" InputScope="Number" TextChanged="OnStimulusTextChanged" />
+
+                <TextBlock Text="Poziom sygnału [dBFS]" Style="{StaticResource FieldLabel}" Margin="0,12,0,2" />
+                <TextBox x:Name="LevelBox" Text="-20" InputScope="Number" TextChanged="OnStimulusTextChanged" />
+
+                <TextBlock Text="Kanał" Style="{StaticResource FieldLabel}" Margin="0,12,0,2" />
+                <StackPanel Orientation="Horizontal">
+                    <RadioButton x:Name="EarLeft" Content="L (lewe)" GroupName="Ear" IsChecked="True" Checked="OnStimulusToggled" />
+                    <RadioButton x:Name="EarRight" Content="P (prawe)" GroupName="Ear" Margin="16,0,0,0" Checked="OnStimulusToggled" />
+                </StackPanel>
+
+                <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
+                    <CheckBox x:Name="PulsedBox" Content="pulsowany" Checked="OnStimulusToggled" Unchecked="OnStimulusToggled" />
+                    <CheckBox x:Name="WarbleBox" Content="wobbulowany" Margin="16,0,0,0" Checked="OnStimulusToggled" Unchecked="OnStimulusToggled" />
+                </StackPanel>
+
+                <StackPanel Orientation="Horizontal" Margin="0,12,0,0">
+                    <Button x:Name="PlayButton" Content="Graj" Width="110" Click="OnPlay" IsEnabled="False" />
+                    <Button x:Name="StopButton" Content="Stop" Width="110" Margin="8,0,0,0" Click="OnStop" IsEnabled="False" />
+                </StackPanel>
+
+                <!-- ── Odczyt z miernika ─────────────────────────────────── -->
+                <TextBlock Text="POMIAR" Style="{StaticResource SectionHeader}" Margin="0,24,0,8" />
+
+                <TextBlock Text="Zmierzony poziom [dB SPL] — odczyt z miernika klasy 1"
+                           Style="{StaticResource FieldLabel}"
+                           TextWrapping="Wrap" />
+                <TextBox x:Name="MeasuredSplBox" InputScope="Number" TextChanged="OnMeasuredChanged"
+                         PlaceholderText="np. 74,3" />
+
+                <TextBlock x:Name="SensitivityPreview"
+                           Margin="0,8,0,0"
+                           FontFamily="Consolas"
+                           FontSize="12"
+                           Opacity="0.8"
+                           TextWrapping="Wrap"
+                           Text="czułość toru: —" />
+
+                <TextBlock Text="Notatka (nieobowiązkowa)" Style="{StaticResource FieldLabel}" Margin="0,12,0,2" />
+                <TextBox x:Name="NoteBox" PlaceholderText="np. powtórka po poprawieniu osadzenia" />
+
+                <Button x:Name="AddPointButton"
+                        Content="Zapisz punkt do mapy"
+                        HorizontalAlignment="Stretch"
+                        Margin="0,12,0,0"
+                        Click="OnAddPoint"
+                        IsEnabled="False" />
+
+                <!-- ── Metadane sesji ────────────────────────────────────── -->
+                <TextBlock Text="SESJA" Style="{StaticResource SectionHeader}" Margin="0,24,0,8" />
+
+                <TextBlock Text="Operator" Style="{StaticResource FieldLabel}" />
+                <TextBox x:Name="OperatorBox" />
+
+                <TextBlock Text="Przetwornik (określa właściwą tabelę RETSPL)" Style="{StaticResource FieldLabel}" Margin="0,12,0,2" TextWrapping="Wrap" />
+                <TextBox x:Name="TransducerBox" PlaceholderText="np. TDH-39" />
+
+                <TextBlock Text="Sprzęgacz" Style="{StaticResource FieldLabel}" Margin="0,12,0,2" />
+                <TextBox x:Name="CouplerBox" PlaceholderText="np. NBS 9A" />
+
+                <TextBlock Text="Notatki do pliku kalibracyjnego" Style="{StaticResource FieldLabel}" Margin="0,12,0,2" TextWrapping="Wrap" />
+                <TextBox x:Name="NotesBox"
+                         AcceptsReturn="True"
+                         Height="70"
+                         TextWrapping="Wrap"
+                         PlaceholderText="pozycja pokręteł M2, numer seryjny słuchawek, warunki pomiaru" />
+            </StackPanel>
+        </ScrollViewer>
+
+        <!-- ── Mapa pomiarów ─────────────────────────────────────────────── -->
+        <Grid Grid.Row="1" Grid.Column="1">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="*" />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
+
+            <TextBlock Grid.Row="0" Text="MAPA POMIARÓW" Style="{StaticResource SectionHeader}" />
+
+            <Grid Grid.Row="1" Padding="12,6" Background="{ThemeResource SystemControlBackgroundListLowBrush}">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="90" />
+                    <ColumnDefinition Width="60" />
+                    <ColumnDefinition Width="110" />
+                    <ColumnDefinition Width="130" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+                <TextBlock Grid.Column="0" Text="Częstotl." FontSize="12" Opacity="0.6" />
+                <TextBlock Grid.Column="1" Text="Kanał" FontSize="12" Opacity="0.6" />
+                <TextBlock Grid.Column="2" Text="Poziom" FontSize="12" Opacity="0.6" />
+                <TextBlock Grid.Column="3" Text="Zmierzone" FontSize="12" Opacity="0.6" />
+                <TextBlock Grid.Column="4" Text="Czułość toru" FontSize="12" Opacity="0.6" />
+            </Grid>
+
+            <ListView x:Name="PointsList"
+                      Grid.Row="2"
+                      SelectionMode="Single"
+                      ScrollViewer.HorizontalScrollMode="Disabled">
+                <ListView.ItemContainerStyle>
+                    <Style TargetType="ListViewItem">
+                        <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                        <Setter Property="Padding" Value="12,4" />
+                    </Style>
+                </ListView.ItemContainerStyle>
+                <ListView.ItemTemplate>
+                    <DataTemplate x:DataType="vm:CalibrationPointRow">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="90" />
+                                <ColumnDefinition Width="60" />
+                                <ColumnDefinition Width="110" />
+                                <ColumnDefinition Width="130" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Grid.Column="0" Text="{x:Bind Frequency}" FontFamily="Consolas" />
+                            <TextBlock Grid.Column="1" Text="{x:Bind Ear}" FontFamily="Consolas" />
+                            <TextBlock Grid.Column="2" Text="{x:Bind Stimulus}" FontFamily="Consolas" />
+                            <TextBlock Grid.Column="3" Text="{x:Bind Measured}" FontFamily="Consolas" />
+                            <TextBlock Grid.Column="4" Text="{x:Bind Sensitivity}" FontFamily="Consolas" Opacity="0.75" />
+                        </Grid>
+                    </DataTemplate>
+                </ListView.ItemTemplate>
+            </ListView>
+
+            <StackPanel Grid.Row="3" Orientation="Horizontal" Margin="0,12,0,0">
+                <Button Content="Usuń zaznaczony" Click="OnRemovePoint" />
+                <Button Content="Wczytaj mapę" Margin="8,0,0,0" Click="OnLoadFile" />
+                <Button Content="Zapisz mapę" Margin="8,0,0,0" Click="OnSaveFile" />
+            </StackPanel>
+        </Grid>
+
+        <!-- ── Pasek stanu ───────────────────────────────────────────────── -->
+        <StackPanel Grid.Row="2" Grid.ColumnSpan="2" Margin="0,16,0,0">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <CheckBox x:Name="VolumeConfirmedBox"
+                          Grid.Column="0"
+                          Content="Potwierdzam: głośność endpointu Windows ustawiona na 100 %, pokrętła M2 w oznaczonej pozycji"
+                          Checked="OnVolumeConfirmationChanged"
+                          Unchecked="OnVolumeConfirmationChanged" />
+                <Button Grid.Column="1" Content="Selftest przeliczeń" Click="OnSelfTest" />
+            </Grid>
+            <TextBlock x:Name="StatusText"
+                       Margin="0,6,0,0"
+                       FontSize="12"
+                       TextWrapping="Wrap"
+                       Text="Mapa jest pusta. Wzorcowanie nie jest domknięte, dopóki nie wykonasz kontroli verify (m2cal verify)." />
+        </StackPanel>
+    </Grid>
+</Page>

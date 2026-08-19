@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Dyrektywy dla kompilacji .NET Native (konfiguracja Release).
+
+  Modele pliku kalibracyjnego są serializowane przez refleksję, więc muszą zostać
+  jawnie zachowane — bez tego zapis i odczyt kalibracji działa w Debug (CoreCLR),
+  a wywraca się dopiero w Release. To jest ta sama pułapka, na którą natrafi
+  aplikacja docelowa, jeśli sięgnie po M2Cal.Core w kompilacji natywnej.
+-->
+<Directives xmlns="http://schemas.microsoft.com/netfx/2013/01/metadata">
+  <Application>
+    <Assembly Name="*Application*" Dynamic="Required All" />
+    <Namespace Name="M2Cal.Core" Dynamic="Required All" Serialize="Required All" />
+    <Assembly Name="System.Text.Json" Dynamic="Required All" />
+  </Application>
+</Directives>

@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Package
+  xmlns="http://schemas.microsoft.com/appx/manifest/foundation/windows10"
+  xmlns:mp="http://schemas.microsoft.com/appx/2014/phone/manifest"
+  xmlns:uap="http://schemas.microsoft.com/appx/manifest/uap/windows10"
+  IgnorableNamespaces="uap mp">
+
+  <Identity
+    Name="eu.cdest.m2cal"
+    Publisher="CN=Grzegorz Oleksy"
+    Version="0.1.0.0" />
+
+  <mp:PhoneIdentity PhoneProductId="6b2a1c4e-9e31-4a5e-9f2b-3d1c7a0f5e82" PhonePublisherId="00000000-0000-0000-0000-000000000000" />
+
+  <Properties>
+    <DisplayName>m2cal — wzorcowanie toru</DisplayName>
+    <PublisherDisplayName>Grzegorz Oleksy</PublisherDisplayName>
+    <Logo>Assets\StoreLogo.png</Logo>
+  </Properties>
+
+  <Dependencies>
+    <TargetDeviceFamily Name="Windows.Universal" MinVersion="10.0.17763.0" MaxVersionTested="10.0.19041.0" />
+  </Dependencies>
+
+  <Resources>
+    <Resource Language="pl-PL" />
+  </Resources>
+
+  <Applications>
+    <Application Id="App"
+      Executable="$targetnametoken$.exe"
+      EntryPoint="M2Cal.Uwp.App">
+      <uap:VisualElements
+        DisplayName="m2cal — wzorcowanie toru"
+        Square150x150Logo="Assets\Square150x150Logo.png"
+        Square44x44Logo="Assets\Square44x44Logo.png"
+        Description="Wzorcowanie toru DAC MOTU M2 na potrzeby badań słuchowych"
+        BackgroundColor="transparent">
+        <uap:DefaultTile Wide310x150Logo="Assets\Wide310x150Logo.png" />
+        <uap:SplashScreen Image="Assets\SplashScreen.png" />
+      </uap:VisualElements>
+    </Application>
+  </Applications>
+
+  <!-- Bez dodatkowych uprawnień: plik kalibracyjny zapisywany i wczytywany
+       przez FileSavePicker / FileOpenPicker, urządzenia audio przez AudioGraph. -->
+  <Capabilities />
+</Package>

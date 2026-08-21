@@ -8,7 +8,7 @@
   <Identity
     Name="eu.cdest.m2cal"
     Publisher="CN=Grzegorz Oleksy"
-    Version="1.1.0.0" />
+    Version="1.1.0.1" />
 
   <mp:PhoneIdentity PhoneProductId="6b2a1c4e-9e31-4a5e-9f2b-3d1c7a0f5e82" PhonePublisherId="00000000-0000-0000-0000-000000000000" />
 

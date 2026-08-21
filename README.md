@@ -155,10 +155,16 @@ działa wszędzie.
 Wydanie powstaje na GitHubie z **taga wersji** — numer wersji trafia do manifestu
 pakietu, więc musi być świadomy, a nie efektem ubocznym pusha:
 
+```powershell
+.\tools\Bump-Version.ps1        # podnosi rewizję w manifescie i AssemblyInfo
+git commit -am "Wersja 1.1.0.2"
+git tag v1.1.0.2
+git push && git push origin v1.1.0.2
 ```
-git tag v0.2.0
-git push origin v0.2.0
-```
+
+Numer podnosi się przy **każdym** wydaniu. Windows odmawia instalacji pakietu
+o numerze nie wyższym od już zainstalowanego — pominięcie tego kroku daje na
+stanowisku aktualizację, która po cichu nie robi nic.
 
 Workflow `.github/workflows/release.yml` uruchamia selftest, buduje konfigurację
 Release x64, podpisuje pakiet i tworzy wydanie z plikami `.msix`, `.cer` oraz

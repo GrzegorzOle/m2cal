@@ -1,5 +1,6 @@
 using Windows.ApplicationModel;
 using Windows.ApplicationModel.Activation;
+using Windows.UI.ViewManagement;
 using Windows.UI.Xaml;
 using Windows.UI.Xaml.Controls;
 using Windows.UI.Xaml.Navigation;
@@ -27,6 +28,10 @@ namespace M2Cal.Uwp
         {
             try
             {
+                // Wzorcowanie prowadzi sie na pelnym ekranie: mapa pomiarow miesci wtedy komplet
+                // punktow bez przewijania, a nic nie odciaga uwagi operatora od odczytu miernika.
+                ApplicationView.PreferredLaunchWindowingMode = ApplicationViewWindowingMode.FullScreen;
+
                 if (!(Window.Current.Content is Frame rootFrame))
                 {
                     rootFrame = new Frame();
@@ -38,6 +43,10 @@ namespace M2Cal.Uwp
                     rootFrame.Navigate(typeof(MainPage), e.Arguments);
 
                 Window.Current.Activate();
+
+                // PreferredLaunchWindowingMode dziala od kolejnego uruchomienia, wiec pierwsze
+                // po instalacji trzeba przelaczyc jawnie.
+                ApplicationView.GetForCurrentView().TryEnterFullScreenMode();
             }
             catch (System.Exception ex)
             {

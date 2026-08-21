@@ -308,6 +308,176 @@ namespace M2Cal.Uwp
             _rows.Remove(row);
         }
 
+        // ---------------------------------------------------------------- metadane stanowiska
+
+        /// <summary>
+        /// Przepisuje formularz do modelu pliku. Wszystko, co nie wynika z pomiaru ani z kodu,
+        /// musi pochodzić stąd — narzędzie nie podstawia żadnych wartości normatywnych samo.
+        /// </summary>
+        private void BuildMetadata()
+        {
+            _calibration.Operator = NullIfBlank(OperatorBox.Text);
+            _calibration.Notes = NullIfBlank(NotesBox.Text);
+
+            // Pola tekstowe zostają dla zgodności wstecznej i dla czytelności pliku.
+            _calibration.Transducer = NullIfBlank(TransducerBox.Text);
+            _calibration.Coupler = NullIfBlank(CouplerBox.Text);
+
+            _calibration.TransducerDetails = new TransducerInfo
+            {
+                Model = NullIfBlank(TransducerBox.Text),
+                SerialNumber = NullIfBlank(TransducerSerialBox.Text),
+                CushionType = SelectedText(CushionBox)
+            };
+
+            _calibration.Equipment = new MeasurementChain
+            {
+                SoundLevelMeter = new InstrumentInfo
+                {
+                    Manufacturer = NullIfBlank(MeterManufacturerBox.Text),
+                    Model = NullIfBlank(MeterModelBox.Text),
+                    SerialNumber = NullIfBlank(MeterSerialBox.Text),
+                    ConformsToStandard = NullIfBlank(MeterStandardBox.Text),
+                    CalibrationCertificate = NullIfBlank(MeterCertificateBox.Text),
+                    CalibratedOnUtc = MeterCalibratedOnPicker.Date?.UtcDateTime
+                },
+                Microphone = new InstrumentInfo
+                {
+                    Model = NullIfBlank(MicModelBox.Text),
+                    SerialNumber = NullIfBlank(MicSerialBox.Text)
+                },
+                Coupler = new InstrumentInfo
+                {
+                    Model = NullIfBlank(CouplerBox.Text),
+                    SerialNumber = NullIfBlank(CouplerSerialBox.Text)
+                },
+                CouplerStandard = NullIfBlank(CouplerStandardBox.Text),
+                FrequencyWeighting = SelectedText(WeightingBox),
+                TimeWeighting = SelectedText(TimeWeightingBox),
+                MeasurementMode = SelectedText(MeasurementModeBox),
+                CalibratorCheck = new AcousticCalibratorCheck
+                {
+                    Calibrator = new InstrumentInfo
+                    {
+                        Model = NullIfBlank(CalibratorModelBox.Text),
+                        SerialNumber = NullIfBlank(CalibratorSerialBox.Text)
+                    },
+                    NominalLevelDbSpl = ParseOptional(CalibratorLevelBox.Text),
+                    NominalFrequencyHz = ParseOptional(CalibratorFrequencyBox.Text),
+                    ReadingBeforeSessionDbSpl = ParseOptional(CalibratorBeforeBox.Text),
+                    ReadingAfterSessionDbSpl = ParseOptional(CalibratorAfterBox.Text)
+                }
+            };
+
+            // Parametry bodzca czytane z kodu syntezy, a nie przepisywane recznie — dzieki temu
+            // plik nie moze opisywac innego bodzca niz ten, ktory faktycznie zabrzmial.
+            var wzorzec = new ToneSynthesizer(_engine.SampleRate > 0 ? _engine.SampleRate : 48000)
+            {
+                Pulsed = PulsedBox.IsChecked == true,
+                Warble = WarbleBox.IsChecked == true
+            };
+
+            _calibration.Stimulus = StimulusSettings.FromSynthesizer(wzorzec);
+            _calibration.Stimulus.TimingSource = NullIfBlank(StdTimingBox.Text);
+            _calibration.SynthesizerVersion = ToneSynthesizer.Version;
+
+            _calibration.Ambient = new AmbientConditions
+            {
+                BackgroundNoiseDbA = ParseOptional(BackgroundNoiseBox.Text),
+                TemperatureCelsius = ParseOptional(TemperatureBox.Text),
+                RelativeHumidityPercent = ParseOptional(HumidityBox.Text),
+                Location = NullIfBlank(LocationBox.Text)
+            };
+
+            _calibration.Standards = new StandardsReferences
+            {
+                Retspl = NullIfBlank(StdRetsplBox.Text),
+                LevelTolerance = NullIfBlank(StdToleranceBox.Text),
+                StimulusTiming = NullIfBlank(StdTimingBox.Text),
+                SoundLevelMeter = NullIfBlank(StdMeterBox.Text),
+                Coupler = NullIfBlank(StdCouplerBox.Text),
+                AmbientNoise = NullIfBlank(StdAmbientBox.Text)
+            };
+        }
+
+        /// <summary>Wypełnia formularz danymi z wczytanego pliku.</summary>
+        private void ApplyMetadata(CalibrationFile loaded)
+        {
+            OperatorBox.Text = loaded.Operator ?? string.Empty;
+            NotesBox.Text = loaded.Notes ?? string.Empty;
+
+            var transducer = loaded.TransducerDetails;
+            TransducerBox.Text = transducer?.Model ?? loaded.Transducer ?? string.Empty;
+            TransducerSerialBox.Text = transducer?.SerialNumber ?? string.Empty;
+            SelectText(CushionBox, transducer?.CushionType);
+
+            var chain = loaded.Equipment;
+            MeterManufacturerBox.Text = chain?.SoundLevelMeter?.Manufacturer ?? string.Empty;
+            MeterModelBox.Text = chain?.SoundLevelMeter?.Model ?? string.Empty;
+            MeterSerialBox.Text = chain?.SoundLevelMeter?.SerialNumber ?? string.Empty;
+            MeterStandardBox.Text = chain?.SoundLevelMeter?.ConformsToStandard ?? string.Empty;
+            MeterCertificateBox.Text = chain?.SoundLevelMeter?.CalibrationCertificate ?? string.Empty;
+            MeterCalibratedOnPicker.Date = chain?.SoundLevelMeter?.CalibratedOnUtc.HasValue == true
+                ? new DateTimeOffset(chain.SoundLevelMeter.CalibratedOnUtc.Value)
+                : (DateTimeOffset?)null;
+
+            MicModelBox.Text = chain?.Microphone?.Model ?? string.Empty;
+            MicSerialBox.Text = chain?.Microphone?.SerialNumber ?? string.Empty;
+
+            CouplerBox.Text = chain?.Coupler?.Model ?? loaded.Coupler ?? string.Empty;
+            CouplerSerialBox.Text = chain?.Coupler?.SerialNumber ?? string.Empty;
+            CouplerStandardBox.Text = chain?.CouplerStandard ?? string.Empty;
+
+            SelectText(WeightingBox, chain?.FrequencyWeighting);
+            SelectText(TimeWeightingBox, chain?.TimeWeighting);
+            SelectText(MeasurementModeBox, chain?.MeasurementMode);
+
+            var calibrator = chain?.CalibratorCheck;
+            CalibratorModelBox.Text = calibrator?.Calibrator?.Model ?? string.Empty;
+            CalibratorSerialBox.Text = calibrator?.Calibrator?.SerialNumber ?? string.Empty;
+            CalibratorLevelBox.Text = Format(calibrator?.NominalLevelDbSpl);
+            CalibratorFrequencyBox.Text = Format(calibrator?.NominalFrequencyHz);
+            CalibratorBeforeBox.Text = Format(calibrator?.ReadingBeforeSessionDbSpl);
+            CalibratorAfterBox.Text = Format(calibrator?.ReadingAfterSessionDbSpl);
+
+            BackgroundNoiseBox.Text = Format(loaded.Ambient?.BackgroundNoiseDbA);
+            TemperatureBox.Text = Format(loaded.Ambient?.TemperatureCelsius);
+            HumidityBox.Text = Format(loaded.Ambient?.RelativeHumidityPercent);
+            LocationBox.Text = loaded.Ambient?.Location ?? string.Empty;
+
+            StdRetsplBox.Text = loaded.Standards?.Retspl ?? string.Empty;
+            StdToleranceBox.Text = loaded.Standards?.LevelTolerance ?? string.Empty;
+            StdTimingBox.Text = loaded.Standards?.StimulusTiming ?? loaded.Stimulus?.TimingSource ?? string.Empty;
+            StdMeterBox.Text = loaded.Standards?.SoundLevelMeter ?? string.Empty;
+            StdCouplerBox.Text = loaded.Standards?.Coupler ?? string.Empty;
+            StdAmbientBox.Text = loaded.Standards?.AmbientNoise ?? string.Empty;
+        }
+
+        private static string SelectedText(ComboBox box) =>
+            (box.SelectedItem as ComboBoxItem)?.Content as string;
+
+        private static void SelectText(ComboBox box, string value)
+        {
+            box.SelectedItem = null;
+            if (string.IsNullOrWhiteSpace(value)) return;
+
+            foreach (var item in box.Items)
+            {
+                if (item is ComboBoxItem entry &&
+                    string.Equals(entry.Content as string, value, StringComparison.OrdinalIgnoreCase))
+                {
+                    box.SelectedItem = entry;
+                    return;
+                }
+            }
+        }
+
+        private static double? ParseOptional(string text) =>
+            TryParse(text, out double value) ? value : (double?)null;
+
+        private static string Format(double? value) =>
+            value.HasValue ? value.Value.ToString("0.###", CultureInfo.InvariantCulture) : string.Empty;
+
         // ---------------------------------------------------------------- plik
 
         private async void OnSaveFile(object sender, RoutedEventArgs e)
@@ -339,11 +509,8 @@ namespace M2Cal.Uwp
                 if (file == null) return;
 
                 _calibration.CreatedAtUtc = DateTime.UtcNow;
-                _calibration.Operator = NullIfBlank(OperatorBox.Text);
-                _calibration.Transducer = NullIfBlank(TransducerBox.Text);
-                _calibration.Coupler = NullIfBlank(CouplerBox.Text);
-                _calibration.Notes = NullIfBlank(NotesBox.Text);
                 _calibration.Device = _engine.Fingerprint(VolumeConfirmedBox.IsChecked == true);
+                BuildMetadata();
 
                 await FileIO.WriteTextAsync(file, CalibrationStore.Serialize(_calibration));
                 UpdateStatus($"zapisano {_calibration.Points.Count} punktów do {file.Name}");
@@ -379,10 +546,7 @@ namespace M2Cal.Uwp
                 _calibration.Verify = loaded.Verify;
                 _calibration.RefDbFs = loaded.RefDbFs;
 
-                OperatorBox.Text = loaded.Operator ?? string.Empty;
-                TransducerBox.Text = loaded.Transducer ?? string.Empty;
-                CouplerBox.Text = loaded.Coupler ?? string.Empty;
-                NotesBox.Text = loaded.Notes ?? string.Empty;
+                ApplyMetadata(loaded);
 
                 UpdateStatus($"wczytano {_rows.Count} punktów z {file.Name}");
             }
@@ -460,10 +624,18 @@ namespace M2Cal.Uwp
             var missing = new List<string>();
             if (VolumeConfirmedBox.IsChecked != true) missing.Add("potwierdzenia głośności endpointu");
             if (_calibration.Verify == null || !_calibration.Verify.Passed) missing.Add("pozytywnej kontroli verify");
-            if (string.IsNullOrWhiteSpace(TransducerBox.Text)) missing.Add("modelu przetwornika");
+
+            // Braki w opisie stanowiska liczy rdzeń, tą samą metodą, ktorej uzyje bramka
+            // dopuszczenia — operator widzi je od razu, a nie dopiero przy probie badania.
+            BuildMetadata();
+            var provenance = _calibration.CheckProvenance();
+            missing.AddRange(provenance.Missing);
 
             if (missing.Count > 0)
                 parts.Add("do dopuszczenia brakuje: " + string.Join(", ", missing));
+
+            if (provenance.Incomplete.Count > 0)
+                parts.Add("do opisu stanowiska brakuje: " + string.Join(", ", provenance.Incomplete));
 
             var spread = LargestSensitivitySpread();
             if (spread > 2.0)

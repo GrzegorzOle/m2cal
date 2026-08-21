@@ -152,7 +152,15 @@ jobs:
           $cert = Get-PfxCertificate -FilePath $env:CERT_PATH -Password $haslo
           Export-Certificate -Cert $cert -FilePath (Join-Path $wydanie 'm2cal-signing.cer') | Out-Null
 
+          # Dokumentacja jedzie razem z pakietem: operator na stanowisku nie ma dostepu do repo.
           Copy-Item 'docs/INSTALACJA.md' $wydanie
+          Copy-Item 'docs/INSTRUKCJA_OPERATORA.md' $wydanie
+          Copy-Item 'docs/FORMAT_PLIKU.md' $wydanie
+
+          # Wzorzec pliku generowany z kodu, wiec opis formatu nie moze rozjechac sie z tym,
+          # co narzedzie faktycznie zapisuje.
+          dotnet run --project src/M2Cal.Cli -- example --out (Join-Path $wydanie 'wzorzec-pliku-kalibracyjnego.json')
+          if ($LASTEXITCODE -ne 0) { throw 'Nie udalo sie wygenerowac wzorca pliku kalibracyjnego.' }
 
           # Plik .appinstaller pozwala Instalatorowi aplikacji sprawdzac przy kazdym starcie,
           # czy jest nowsza wersja. Monit jest wlaczony swiadomie: zmiana syntezy bodzcow
@@ -201,7 +209,11 @@ jobs:
           $notatki = @(
             'Pakiet instalacyjny narzedzia do wzorcowania toru MOTU M2.'
             ''
-            'Pelna instrukcja: INSTALACJA.md w zalacznikach.'
+            'W zalacznikach:'
+            '  INSTALACJA.md            - instalacja i aktualizacja'
+            '  INSTRUKCJA_OPERATORA.md  - opis kazdego pola formularza i sposobu wpisywania'
+            '  FORMAT_PLIKU.md          - format pliku kalibracyjnego'
+            '  wzorzec-pliku-kalibracyjnego.json - komplet pol, generowany z kodu'
             ''
             'W skrocie, na stanowisku pomiarowym:'
             ''

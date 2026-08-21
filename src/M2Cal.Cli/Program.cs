@@ -38,6 +38,7 @@ namespace M2Cal.Cli
                     case "verify": return Verify(options);
                     case "screen": return Screen(options);
                     case "selftest": return RunSelfTest();
+                    case "example": return Example(options);
                     default:
                         Console.Error.WriteLine($"nieznana komenda: {args[0]}");
                         PrintUsage();
@@ -63,6 +64,7 @@ namespace M2Cal.Cli
   verify --cal plik --retspl plik --hl 20  kontrola poziomów w dB HL (--tolerance 3)
   screen --cal plik --retspl plik --hl 20  podgląd bodźca przesiewowego
   selftest                                 testy matematyki, bez sprzętu, każdy OS
+  example [--out plik]                     wzorzec pliku kalibracyjnego z wszystkimi polami
 
 Kody wyjścia: 0 OK, 1 błąd, 3 bramka odrzuciła, 4 verify negatywny.");
         }
@@ -384,6 +386,25 @@ Kody wyjścia: 0 OK, 1 błąd, 3 bramka odrzuciła, 4 verify negatywny.");
 
             Console.WriteLine($"\n{report.PassedCount}/{report.Cases.Count} testów przeszło.");
             return report.AllPassed ? ExitOk : ExitError;
+        }
+
+        // ---------------------------------------------------------------- example
+
+        /// <summary>
+        /// Wypisuje wzorzec pliku kalibracyjnego. Dokumentacja formatu jest z niego generowana,
+        /// więc opis nie może rozjechać się z tym, co narzędzie faktycznie zapisuje.
+        /// </summary>
+        private static int Example(ArgMap options)
+        {
+            string json = CalibrationStore.Serialize(CalibrationTemplate.Create());
+
+            string outPath = options.String("out");
+            if (string.IsNullOrWhiteSpace(outPath))
+                Console.WriteLine(json);
+            else
+                File.WriteAllText(outPath, json);
+
+            return ExitOk;
         }
 
         // ---------------------------------------------------------------- pomocnicze

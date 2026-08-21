@@ -44,7 +44,7 @@ namespace M2Cal.Core
             if (calibration.SchemaVersion != CalibrationFile.CurrentSchemaVersion)
                 result.Blockers.Add($"nieobsługiwana wersja schematu pliku ({calibration.SchemaVersion}, oczekiwano {CalibrationFile.CurrentSchemaVersion})");
 
-            if (calibration.SynthesizerVersion != 1)
+            if (calibration.SynthesizerVersion != ToneSynthesizer.Version)
                 result.Blockers.Add($"plik opisuje inną wersję syntezy bodźców ({calibration.SynthesizerVersion}) — kalibracja nie opisuje aktualnego kodu DSP");
 
             if (calibration.Points == null || calibration.Points.Count == 0)
@@ -80,6 +80,20 @@ namespace M2Cal.Core
             {
                 result.Blockers.Add($"tabela RETSPL dotyczy przetwornika {retspl.Transducer}, a kalibracja {calibration.Transducer}");
             }
+
+            // Brak udokumentowania toru pomiarowego nie jest usterką formalną: pomiar bez
+            // zidentyfikowanego, wzorcowanego miernika nie jest spójny pomiarowo, a bez podanej
+            // normy RETSPL nie wiadomo, względem czego wyznaczono dB HL.
+            var provenance = calibration.CheckProvenance();
+            foreach (var missing in provenance.Missing)
+                result.Blockers.Add("brak danych o stanowisku: " + missing);
+
+            foreach (var incomplete in provenance.Incomplete)
+                result.Warnings.Add("do opisu stanowiska brakuje: " + incomplete);
+
+            var drift = calibration.Equipment?.CalibratorCheck?.DriftDb;
+            if (drift.HasValue && Math.Abs(drift.Value) > 0.5)
+                result.Blockers.Add($"tor pomiarowy odjechał o {drift.Value:0.0} dB między sprawdzeniami kalibratorem — wyniki sesji są niepewne");
 
             if (calibration.Points != null)
             {

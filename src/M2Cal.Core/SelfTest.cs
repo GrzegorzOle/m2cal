@@ -176,6 +176,95 @@ namespace M2Cal.Core
                        && restored.Verify != null && restored.Verify.Passed;
             });
 
+            Check(report, "metadane stanowiska przechodzą obieg JSON bez strat", () =>
+            {
+                var cal = ExampleCalibration();
+                var restored = CalibrationStore.Deserialize(CalibrationStore.Serialize(cal));
+
+                return restored.Equipment?.SoundLevelMeter?.SerialNumber == "SLM-1"
+                       && restored.Equipment.CouplerStandard == "selftest"
+                       && restored.Equipment.FrequencyWeighting == "Z"
+                       && restored.TransducerDetails?.SerialNumber == "SELFTEST-T1"
+                       && restored.Standards?.Retspl == "selftest"
+                       && Near(restored.Stimulus.RiseFallMs, ToneSynthesizer.RampSeconds * 1000, 1e-9)
+                       && restored.Stimulus.SynthesizerVersion == ToneSynthesizer.Version;
+            });
+
+            Check(report, "kompletne udokumentowanie stanowiska nie zgłasza braków",
+                  () => ExampleCalibration().CheckProvenance().IsComplete);
+
+            Check(report, "brak miernika blokuje dopuszczenie", () =>
+            {
+                var cal = ExampleCalibration();
+                cal.Equipment.SoundLevelMeter = null;
+                return !DeviceGate.Check(cal, cal.Device, cal.CreatedAtUtc.AddDays(1)).Allowed;
+            });
+
+            Check(report, "brak świadectwa wzorcowania miernika blokuje dopuszczenie", () =>
+            {
+                var cal = ExampleCalibration();
+                cal.Equipment.SoundLevelMeter.CalibrationCertificate = null;
+                return !DeviceGate.Check(cal, cal.Device, cal.CreatedAtUtc.AddDays(1)).Allowed;
+            });
+
+            Check(report, "brak normy RETSPL blokuje dopuszczenie", () =>
+            {
+                var cal = ExampleCalibration();
+                cal.Standards.Retspl = null;
+                return !DeviceGate.Check(cal, cal.Device, cal.CreatedAtUtc.AddDays(1)).Allowed;
+            });
+
+            Check(report, "brak normy sprzęgacza blokuje dopuszczenie", () =>
+            {
+                var cal = ExampleCalibration();
+                cal.Equipment.CouplerStandard = null;
+                return !DeviceGate.Check(cal, cal.Device, cal.CreatedAtUtc.AddDays(1)).Allowed;
+            });
+
+            Check(report, "brak źródła czasów bodźca blokuje dopuszczenie", () =>
+            {
+                var cal = ExampleCalibration();
+                cal.Stimulus.TimingSource = null;
+                return !DeviceGate.Check(cal, cal.Device, cal.CreatedAtUtc.AddDays(1)).Allowed;
+            });
+
+            Check(report, "dryf toru pomiarowego blokuje dopuszczenie", () =>
+            {
+                var cal = ExampleCalibration();
+                cal.Equipment.CalibratorCheck.ReadingAfterSessionDbSpl = 95.4;   // 1,4 dB dryfu
+                return !DeviceGate.Check(cal, cal.Device, cal.CreatedAtUtc.AddDays(1)).Allowed;
+            });
+
+            Check(report, "brak hałasu tła tylko ostrzega, nie blokuje", () =>
+            {
+                var cal = ExampleCalibration();
+                cal.Ambient = null;
+                var gate = DeviceGate.Check(cal, cal.Device, cal.CreatedAtUtc.AddDays(1));
+                return gate.Allowed && gate.Warnings.Count > 0;
+            });
+
+            Check(report, "plik w starej wersji schematu jest odrzucany", () =>
+            {
+                var cal = ExampleCalibration();
+                cal.SchemaVersion = 1;
+                return !DeviceGate.Check(cal, cal.Device, cal.CreatedAtUtc.AddDays(1)).Allowed;
+            });
+
+            Check(report, "parametry bodźca odczytane z syntezatora zgadzają się z kodem", () =>
+            {
+                var synth = new ToneSynthesizer(48000) { Pulsed = true, Warble = false };
+                var settings = StimulusSettings.FromSynthesizer(synth);
+
+                return Near(settings.RiseFallMs, 25.0, 1e-9)
+                       && Near(settings.PulseOnMs, 225.0, 1e-9)
+                       && Near(settings.PulseOffMs, 225.0, 1e-9)
+                       && Near(settings.WarbleDepthPercent, 5.0, 1e-9)
+                       && Near(settings.WarbleRateHz, 5.0, 1e-9)
+                       && settings.Pulsed && !settings.Warble
+                       && settings.SampleRate == 48000
+                       && settings.SynthesizerVersion == ToneSynthesizer.Version;
+            });
+
             return report;
         }
 
@@ -214,6 +303,45 @@ namespace M2Cal.Core
                     Passed = true,
                     MaxDeviationDb = 0.8,
                     ToleranceDb = 3.0
+                },
+                TransducerDetails = new TransducerInfo
+                {
+                    Model = "TDH-39", SerialNumber = "SELFTEST-T1", CushionType = "supraauralne"
+                },
+                Equipment = new MeasurementChain
+                {
+                    SoundLevelMeter = new InstrumentInfo
+                    {
+                        Model = "SELFTEST-SLM", SerialNumber = "SLM-1",
+                        ConformsToStandard = "selftest", CalibrationCertificate = "SELFTEST/1",
+                        CalibratedOnUtc = created.AddDays(-30)
+                    },
+                    Microphone = new InstrumentInfo { Model = "SELFTEST-MIC", SerialNumber = "MIC-1" },
+                    Coupler = new InstrumentInfo { Model = "SELFTEST-COUPLER", SerialNumber = "C-1" },
+                    CouplerStandard = "selftest",
+                    FrequencyWeighting = "Z",
+                    TimeWeighting = "S",
+                    MeasurementMode = "SPL",
+                    CalibratorCheck = new AcousticCalibratorCheck
+                    {
+                        Calibrator = new InstrumentInfo { Model = "SELFTEST-CAL", SerialNumber = "CAL-1" },
+                        ReadingBeforeSessionDbSpl = 94.0,
+                        ReadingAfterSessionDbSpl = 94.1
+                    }
+                },
+                Stimulus = new StimulusSettings
+                {
+                    RiseFallMs = ToneSynthesizer.RampSeconds * 1000,
+                    PulseOnMs = ToneSynthesizer.PulseOnSeconds * 1000,
+                    PulseOffMs = ToneSynthesizer.PulseOffSeconds * 1000,
+                    SampleRate = 48000,
+                    SynthesizerVersion = ToneSynthesizer.Version,
+                    TimingSource = "selftest"
+                },
+                Ambient = new AmbientConditions { BackgroundNoiseDbA = 25.0 },
+                Standards = new StandardsReferences
+                {
+                    Retspl = "selftest", LevelTolerance = "selftest", SoundLevelMeter = "selftest"
                 }
             };
         }

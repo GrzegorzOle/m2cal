@@ -11,7 +11,19 @@ namespace M2Cal.Core
     /// </summary>
     public sealed class ToneSynthesizer
     {
-        /// <summary>Czas narastania i opadania obwiedni (ISO 8253-1 dopuszcza 20–50 ms).</summary>
+        /// <summary>
+        /// Wersja kodu syntezy. Każda zmiana którejkolwiek stałej poniżej albo kształtu
+        /// obwiedni musi ją podnieść — inaczej istniejące pliki kalibracyjne opisywałyby
+        /// bodziec inny od tego, który faktycznie zabrzmi.
+        /// </summary>
+        public const int Version = 1;
+
+        // Poniższe wartości są nastawami przyjętymi w tym narzędziu, a nie cytatem z normy.
+        // Trafiają do pliku kalibracyjnego (StimulusSettings), a normę, z której je dobrano,
+        // wpisuje operator w polu TimingSource. Narzędzie nie rozstrzyga za niego, co jest
+        // zgodne z normą — nie zna jej treści.
+
+        /// <summary>Czas narastania i opadania obwiedni.</summary>
         public const double RampSeconds = 0.025;
 
         /// <summary>Czas trwania fazy „ton włączony" w bodźcu pulsowanym.</summary>
@@ -20,7 +32,7 @@ namespace M2Cal.Core
         /// <summary>Czas trwania przerwy w bodźcu pulsowanym.</summary>
         public const double PulseOffSeconds = 0.225;
 
-        /// <summary>Głębokość modulacji tonu wobbulowanego (±5 % częstotliwości nośnej).</summary>
+        /// <summary>Głębokość modulacji tonu wobbulowanego, jako ułamek częstotliwości nośnej.</summary>
         public const double WarbleDepth = 0.05;
 
         /// <summary>Częstotliwość modulacji tonu wobbulowanego.</summary>

@@ -127,7 +127,12 @@ namespace M2Cal.Core
     /// </summary>
     public sealed class CalibrationFile
     {
-        public const int CurrentSchemaVersion = 1;
+        /// <summary>
+        /// Wersja 2 wprowadza obowiązkowe udokumentowanie toru pomiarowego i źródeł wartości
+        /// normatywnych. Pliki w wersji 1 są odrzucane celowo: nie zawierają danych, bez
+        /// których wyniku nie da się obronić ani odtworzyć.
+        /// </summary>
+        public const int CurrentSchemaVersion = 2;
 
         /// <summary>Domyślny okres ważności kalibracji.</summary>
         public const int DefaultMaxAgeDays = 365;
@@ -152,9 +157,24 @@ namespace M2Cal.Core
         /// Wersja kodu syntezy bodźców. Zmiana <see cref="ToneSynthesizer"/> musi podnieść tę
         /// wartość — inaczej aplikacja docelowa użyłaby kalibracji opisującej inny bodziec.
         /// </summary>
-        public int SynthesizerVersion { get; set; } = 1;
+        public int SynthesizerVersion { get; set; } = ToneSynthesizer.Version;
 
         public DeviceFingerprint Device { get; set; }
+
+        /// <summary>Czym i w jakich nastawach mierzono poziom akustyczny.</summary>
+        public MeasurementChain Equipment { get; set; }
+
+        /// <summary>Przetwornik, na który podawano bodziec.</summary>
+        public TransducerInfo TransducerDetails { get; set; }
+
+        /// <summary>Komplet parametrów syntezy — pozwala aplikacji docelowej odtworzyć bodziec.</summary>
+        public StimulusSettings Stimulus { get; set; }
+
+        /// <summary>Warunki otoczenia w trakcie sesji.</summary>
+        public AmbientConditions Ambient { get; set; }
+
+        /// <summary>Normy, z których pochodzą wartości nie wynikające z pomiaru ani z kodu.</summary>
+        public StandardsReferences Standards { get; set; }
 
         /// <summary>Mapa pomiarów: częstotliwość → poziom cyfrowy → zmierzony poziom akustyczny.</summary>
         public List<CalibrationPoint> Points { get; set; } = new List<CalibrationPoint>();
@@ -233,5 +253,85 @@ namespace M2Cal.Core
 
         /// <summary>Wiek kalibracji w dniach względem podanej chwili.</summary>
         public double AgeInDays(DateTime nowUtc) => (nowUtc - CreatedAtUtc).TotalDays;
+
+        /// <summary>
+        /// Sprawdza, czy sesja jest udokumentowana na tyle, by wynik dało się odtworzyć i obronić.
+        ///
+        /// <see cref="ProvenanceReport.Missing"/> to braki blokujące — bez nich pomiar nie jest
+        /// przypisany do konkretnego przyrządu ani do konkretnej normy, więc nie jest spójny
+        /// pomiarowo. <see cref="ProvenanceReport.Incomplete"/> to dane, których brak nie
+        /// przekreśla wyniku, ale które trzeba podać, opisując stanowisko w publikacji.
+        /// </summary>
+        public ProvenanceReport CheckProvenance()
+        {
+            var report = new ProvenanceReport();
+
+            if (string.IsNullOrWhiteSpace(Operator)) report.Missing.Add("osoba prowadząca wzorcowanie");
+
+            if (Equipment == null)
+            {
+                report.Missing.Add("opis toru pomiarowego");
+            }
+            else
+            {
+                if (Equipment.SoundLevelMeter == null || !Equipment.SoundLevelMeter.IsIdentified)
+                    report.Missing.Add("model i numer seryjny miernika poziomu dźwięku");
+                else if (!Equipment.SoundLevelMeter.HasTraceability)
+                    report.Missing.Add("świadectwo wzorcowania miernika (numer i data)");
+
+                if (Equipment.Coupler == null || !Equipment.Coupler.IsIdentified)
+                    report.Missing.Add("model i numer seryjny sprzęgacza");
+
+                if (string.IsNullOrWhiteSpace(Equipment.CouplerStandard))
+                    report.Missing.Add("norma sprzęgacza — RETSPL zależy od pary przetwornik + sprzęgacz");
+
+                if (string.IsNullOrWhiteSpace(Equipment.FrequencyWeighting))
+                    report.Missing.Add("ważenie częstotliwościowe miernika");
+
+                if (string.IsNullOrWhiteSpace(Equipment.TimeWeighting))
+                    report.Incomplete.Add("ważenie czasowe miernika");
+
+                if (string.IsNullOrWhiteSpace(Equipment.MeasurementMode))
+                    report.Incomplete.Add("odczytywana wielkość (SPL / Leq)");
+
+                if (Equipment.CalibratorCheck == null ||
+                    !Equipment.CalibratorCheck.ReadingBeforeSessionDbSpl.HasValue)
+                    report.Missing.Add("sprawdzenie toru kalibratorem akustycznym przed sesją");
+                else if (!Equipment.CalibratorCheck.ReadingAfterSessionDbSpl.HasValue)
+                    report.Incomplete.Add("sprawdzenie kalibratorem po sesji — bez niego nie znasz dryfu toru");
+
+                if (Equipment.Microphone == null || !Equipment.Microphone.IsIdentified)
+                    report.Incomplete.Add("model i numer seryjny mikrofonu");
+            }
+
+            if (TransducerDetails == null || !TransducerDetails.IsIdentified)
+                report.Missing.Add("model i numer seryjny przetwornika");
+
+            if (Stimulus == null)
+                report.Missing.Add("parametry syntezy bodźca");
+            else if (string.IsNullOrWhiteSpace(Stimulus.TimingSource))
+                report.Missing.Add("źródło czasów narastania i trwania bodźca");
+
+            if (Standards == null)
+            {
+                report.Missing.Add("źródła wartości normatywnych");
+            }
+            else
+            {
+                if (string.IsNullOrWhiteSpace(Standards.Retspl))
+                    report.Missing.Add("norma, z której pochodzą wartości RETSPL, wraz z wydaniem");
+
+                if (string.IsNullOrWhiteSpace(Standards.LevelTolerance))
+                    report.Missing.Add("źródło przyjętej tolerancji poziomu");
+
+                if (string.IsNullOrWhiteSpace(Standards.SoundLevelMeter))
+                    report.Incomplete.Add("norma miernika poziomu dźwięku");
+            }
+
+            if (Ambient == null || !Ambient.BackgroundNoiseDbA.HasValue)
+                report.Incomplete.Add("poziom hałasu tła w pomieszczeniu");
+
+            return report;
+        }
     }
 }

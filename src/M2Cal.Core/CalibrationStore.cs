@@ -17,7 +17,12 @@ namespace M2Cal.Core
         {
             WriteIndented = true,
             PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-            PropertyNameCaseInsensitive = true
+            PropertyNameCaseInsensitive = true,
+
+            // Domyślny koder ucieka polskie znaki do postaci ł. Plik kalibracyjny bywa
+            // załącznikiem do publikacji i czyta go człowiek, więc znaki mają zostać znakami.
+            // „Unsafe" w nazwie dotyczy osadzania w HTML — tu plik trafia na dysk, nie do strony.
+            Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping
         };
 
         public static string Serialize(CalibrationFile calibration) =>

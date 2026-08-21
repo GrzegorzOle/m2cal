@@ -59,7 +59,12 @@
         </StackPanel>
 
         <!-- ── Bodziec i pomiar ──────────────────────────────────────────── -->
-        <ScrollViewer Grid.Row="1" Grid.Column="0" Margin="0,0,20,0" VerticalScrollBarVisibility="Auto">
+        <!-- Pasek przewijania jest widoczny zawsze, takze gdy formularz miesci sie w oknie:
+             ma od pierwszego spojrzenia informowac, ze ta kolumna jest dluzsza niz ekran. -->
+        <ScrollViewer Grid.Row="1" Grid.Column="0" Margin="0,0,20,0"
+                      VerticalScrollBarVisibility="Visible"
+                      ScrollViewer.VerticalScrollMode="Enabled"
+                      Padding="0,0,4,0">
             <StackPanel>
                 <TextBlock Text="BODZIEC" Style="{StaticResource SectionHeader}" />
 
@@ -131,18 +136,178 @@
                 <TextBlock Text="Operator" Style="{StaticResource FieldLabel}" />
                 <TextBox x:Name="OperatorBox" />
 
-                <TextBlock Text="Przetwornik (określa właściwą tabelę RETSPL)" Style="{StaticResource FieldLabel}" Margin="0,12,0,2" TextWrapping="Wrap" />
+                <!-- ── Przetwornik ───────────────────────────────────────── -->
+                <TextBlock Text="PRZETWORNIK" Style="{StaticResource SectionHeader}" Margin="0,24,0,8" />
+
+                <TextBlock Text="Model (określa właściwą tabelę RETSPL)" Style="{StaticResource FieldLabel}" TextWrapping="Wrap" />
                 <TextBox x:Name="TransducerBox" PlaceholderText="np. TDH-39" />
 
-                <TextBlock Text="Sprzęgacz" Style="{StaticResource FieldLabel}" Margin="0,12,0,2" />
+                <TextBlock Text="Numer seryjny" Style="{StaticResource FieldLabel}" Margin="0,8,0,2" />
+                <TextBox x:Name="TransducerSerialBox" />
+
+                <TextBlock Text="Poduszki" Style="{StaticResource FieldLabel}" Margin="0,8,0,2" />
+                <ComboBox x:Name="CushionBox" HorizontalAlignment="Stretch" PlaceholderText="wybierz">
+                    <ComboBoxItem Content="supraauralne" />
+                    <ComboBoxItem Content="dookołouszne" />
+                    <ComboBoxItem Content="douszne" />
+                </ComboBox>
+
+                <!-- ── Tor pomiarowy ─────────────────────────────────────── -->
+                <TextBlock Text="MIERNIK POZIOMU DŹWIĘKU" Style="{StaticResource SectionHeader}" Margin="0,24,0,8" />
+
+                <TextBlock Text="Producent" Style="{StaticResource FieldLabel}" />
+                <TextBox x:Name="MeterManufacturerBox" />
+
+                <TextBlock Text="Model" Style="{StaticResource FieldLabel}" Margin="0,8,0,2" />
+                <TextBox x:Name="MeterModelBox" />
+
+                <TextBlock Text="Numer seryjny" Style="{StaticResource FieldLabel}" Margin="0,8,0,2" />
+                <TextBox x:Name="MeterSerialBox" />
+
+                <TextBlock Text="Norma i klasa" Style="{StaticResource FieldLabel}" Margin="0,8,0,2" />
+                <TextBox x:Name="MeterStandardBox" PlaceholderText="np. IEC 61672-1 klasa 1" />
+
+                <TextBlock Text="Świadectwo wzorcowania — numer" Style="{StaticResource FieldLabel}" Margin="0,8,0,2" TextWrapping="Wrap" />
+                <TextBox x:Name="MeterCertificateBox" />
+
+                <TextBlock Text="Świadectwo wzorcowania — data" Style="{StaticResource FieldLabel}" Margin="0,8,0,2" TextWrapping="Wrap" />
+                <CalendarDatePicker x:Name="MeterCalibratedOnPicker" HorizontalAlignment="Stretch" PlaceholderText="wybierz datę" />
+
+                <TextBlock Text="Ważenie częstotliwościowe" Style="{StaticResource FieldLabel}" Margin="0,8,0,2" />
+                <ComboBox x:Name="WeightingBox" HorizontalAlignment="Stretch" PlaceholderText="wybierz">
+                    <ComboBoxItem Content="Z" />
+                    <ComboBoxItem Content="C" />
+                    <ComboBoxItem Content="A" />
+                </ComboBox>
+
+                <TextBlock Text="Ważenie czasowe" Style="{StaticResource FieldLabel}" Margin="0,8,0,2" />
+                <ComboBox x:Name="TimeWeightingBox" HorizontalAlignment="Stretch" PlaceholderText="wybierz">
+                    <ComboBoxItem Content="F" />
+                    <ComboBoxItem Content="S" />
+                </ComboBox>
+
+                <TextBlock Text="Odczytywana wielkość" Style="{StaticResource FieldLabel}" Margin="0,8,0,2" />
+                <ComboBox x:Name="MeasurementModeBox" HorizontalAlignment="Stretch" PlaceholderText="wybierz">
+                    <ComboBoxItem Content="SPL" />
+                    <ComboBoxItem Content="Leq" />
+                    <ComboBoxItem Content="SPLmax" />
+                </ComboBox>
+
+                <TextBlock Text="MIKROFON" Style="{StaticResource SectionHeader}" Margin="0,24,0,8" />
+
+                <TextBlock Text="Model" Style="{StaticResource FieldLabel}" />
+                <TextBox x:Name="MicModelBox" />
+
+                <TextBlock Text="Numer seryjny" Style="{StaticResource FieldLabel}" Margin="0,8,0,2" />
+                <TextBox x:Name="MicSerialBox" />
+
+                <TextBlock Text="SPRZĘGACZ" Style="{StaticResource SectionHeader}" Margin="0,24,0,8" />
+
+                <TextBlock Text="Model" Style="{StaticResource FieldLabel}" />
                 <TextBox x:Name="CouplerBox" PlaceholderText="np. NBS 9A" />
 
-                <TextBlock Text="Notatki do pliku kalibracyjnego" Style="{StaticResource FieldLabel}" Margin="0,12,0,2" TextWrapping="Wrap" />
+                <TextBlock Text="Numer seryjny" Style="{StaticResource FieldLabel}" Margin="0,8,0,2" />
+                <TextBox x:Name="CouplerSerialBox" />
+
+                <TextBlock Text="Norma sprzęgacza" Style="{StaticResource FieldLabel}" Margin="0,8,0,2" />
+                <TextBox x:Name="CouplerStandardBox" PlaceholderText="np. IEC 60318-3" />
+
+                <!-- ── Kalibrator akustyczny ─────────────────────────────── -->
+                <TextBlock Text="KALIBRATOR AKUSTYCZNY" Style="{StaticResource SectionHeader}" Margin="0,24,0,8" />
+
+                <TextBlock Text="Model" Style="{StaticResource FieldLabel}" />
+                <TextBox x:Name="CalibratorModelBox" />
+
+                <TextBlock Text="Numer seryjny" Style="{StaticResource FieldLabel}" Margin="0,8,0,2" />
+                <TextBox x:Name="CalibratorSerialBox" />
+
+                <Grid Margin="0,8,0,0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <StackPanel Grid.Column="0" Margin="0,0,6,0">
+                        <TextBlock Text="Poziom [dB SPL]" Style="{StaticResource FieldLabel}" />
+                        <TextBox x:Name="CalibratorLevelBox" InputScope="Number" />
+                    </StackPanel>
+                    <StackPanel Grid.Column="1" Margin="6,0,0,0">
+                        <TextBlock Text="Częstotliwość [Hz]" Style="{StaticResource FieldLabel}" />
+                        <TextBox x:Name="CalibratorFrequencyBox" InputScope="Number" />
+                    </StackPanel>
+                </Grid>
+
+                <Grid Margin="0,8,0,0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <StackPanel Grid.Column="0" Margin="0,0,6,0">
+                        <TextBlock Text="Odczyt przed sesją" Style="{StaticResource FieldLabel}" TextWrapping="Wrap" />
+                        <TextBox x:Name="CalibratorBeforeBox" InputScope="Number" />
+                    </StackPanel>
+                    <StackPanel Grid.Column="1" Margin="6,0,0,0">
+                        <TextBlock Text="Odczyt po sesji" Style="{StaticResource FieldLabel}" TextWrapping="Wrap" />
+                        <TextBox x:Name="CalibratorAfterBox" InputScope="Number" />
+                    </StackPanel>
+                </Grid>
+
+                <!-- ── Warunki ───────────────────────────────────────────── -->
+                <TextBlock Text="WARUNKI" Style="{StaticResource SectionHeader}" Margin="0,24,0,8" />
+
+                <TextBlock Text="Hałas tła [dB(A)]" Style="{StaticResource FieldLabel}" />
+                <TextBox x:Name="BackgroundNoiseBox" InputScope="Number" />
+
+                <Grid Margin="0,8,0,0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <StackPanel Grid.Column="0" Margin="0,0,6,0">
+                        <TextBlock Text="Temperatura [°C]" Style="{StaticResource FieldLabel}" />
+                        <TextBox x:Name="TemperatureBox" InputScope="Number" />
+                    </StackPanel>
+                    <StackPanel Grid.Column="1" Margin="6,0,0,0">
+                        <TextBlock Text="Wilgotność [%]" Style="{StaticResource FieldLabel}" />
+                        <TextBox x:Name="HumidityBox" InputScope="Number" />
+                    </StackPanel>
+                </Grid>
+
+                <TextBlock Text="Pomieszczenie / stanowisko" Style="{StaticResource FieldLabel}" Margin="0,8,0,2" TextWrapping="Wrap" />
+                <TextBox x:Name="LocationBox" />
+
+                <!-- ── Źródła wartości normatywnych ──────────────────────── -->
+                <TextBlock Text="ŹRÓDŁA WARTOŚCI NORMATYWNYCH" Style="{StaticResource SectionHeader}" Margin="0,24,0,4" />
+                <TextBlock Text="Podaj normę wraz z wydaniem. Narzędzie tych wartości nie zna i ich nie zgaduje — odpowiada za nie operator."
+                           Style="{StaticResource FieldLabel}"
+                           TextWrapping="Wrap"
+                           Margin="0,0,0,8" />
+
+                <TextBlock Text="RETSPL" Style="{StaticResource FieldLabel}" />
+                <TextBox x:Name="StdRetsplBox" PlaceholderText="np. ISO 389-1:2017" />
+
+                <TextBlock Text="Tolerancja poziomu" Style="{StaticResource FieldLabel}" Margin="0,8,0,2" />
+                <TextBox x:Name="StdToleranceBox" />
+
+                <TextBlock Text="Czasy bodźca (narastanie, impuls)" Style="{StaticResource FieldLabel}" Margin="0,8,0,2" TextWrapping="Wrap" />
+                <TextBox x:Name="StdTimingBox" />
+
+                <TextBlock Text="Miernik poziomu dźwięku" Style="{StaticResource FieldLabel}" Margin="0,8,0,2" />
+                <TextBox x:Name="StdMeterBox" />
+
+                <TextBlock Text="Sprzęgacz" Style="{StaticResource FieldLabel}" Margin="0,8,0,2" />
+                <TextBox x:Name="StdCouplerBox" />
+
+                <TextBlock Text="Dopuszczalny hałas tła" Style="{StaticResource FieldLabel}" Margin="0,8,0,2" />
+                <TextBox x:Name="StdAmbientBox" />
+
+                <TextBlock Text="Notatki do pliku kalibracyjnego" Style="{StaticResource FieldLabel}" Margin="0,24,0,2" TextWrapping="Wrap" />
                 <TextBox x:Name="NotesBox"
                          AcceptsReturn="True"
                          Height="70"
                          TextWrapping="Wrap"
-                         PlaceholderText="pozycja pokręteł M2, numer seryjny słuchawek, warunki pomiaru" />
+                         PlaceholderText="pozycja pokręteł M2, przebieg sesji, odstępstwa od procedury" />
+
+                <Border Height="24" />
             </StackPanel>
         </ScrollViewer>
 

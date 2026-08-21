@@ -5,6 +5,6 @@ using System.Runtime.InteropServices;
 [assembly: AssemblyDescription("Wzorcowanie toru DAC MOTU M2")]
 [assembly: AssemblyProduct("m2cal")]
 [assembly: AssemblyCopyright("Copyright (c) 2026 Grzegorz Oleksy")]
-[assembly: AssemblyVersion("1.1.0.2")]
-[assembly: AssemblyFileVersion("1.1.0.2")]
+[assembly: AssemblyVersion("1.1.0.3")]
+[assembly: AssemblyFileVersion("1.1.0.3")]
 [assembly: ComVisible(false)]

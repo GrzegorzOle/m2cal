@@ -140,7 +140,11 @@ jobs:
 
           $wydanie = 'artifacts/wydanie'
           New-Item -ItemType Directory -Force -Path $wydanie | Out-Null
-          Copy-Item $msix.FullName (Join-Path $wydanie $msix.Name)
+
+          # Nazwa pakietu bez numeru wersji: automatyczna aktualizacja wymaga adresu, ktory
+          # nie zmienia sie miedzy wydaniami (releases/latest/download/<nazwa>).
+          $nazwaMsix = 'm2cal-x64.msix'
+          Copy-Item $msix.FullName (Join-Path $wydanie $nazwaMsix)
 
           # Czesc jawna certyfikatu jedzie razem z pakietem — bez niej stanowisko nie ma
           # jak zaufac podpisowi, a instalacja sie nie powiedzie.
@@ -150,8 +154,36 @@ jobs:
 
           Copy-Item 'docs/INSTALACJA.md' $wydanie
 
+          # Plik .appinstaller pozwala Instalatorowi aplikacji sprawdzac przy kazdym starcie,
+          # czy jest nowsza wersja. Monit jest wlaczony swiadomie: zmiana syntezy bodzcow
+          # uniewaznia kalibracje, wiec operator ma sie dowiedziec o podmianie wersji.
+          $bazowy = '${{ github.server_url }}/${{ github.repository }}/releases/latest/download'
+          $wersja = '${{ steps.wersja.outputs.version }}'
+          [xml] $manifest = Get-Content 'src/M2Cal.Uwp/Package.appxmanifest'
+          $nazwa = $manifest.Package.Identity.Name
+          $publisher = $manifest.Package.Identity.Publisher
+
+          $appinstaller = @(
+            '<?xml version="1.0" encoding="utf-8"?>'
+            '<AppInstaller'
+            '    xmlns="http://schemas.microsoft.com/appx/appinstaller/2018"'
+            "    Version=`"$wersja`""
+            "    Uri=`"$bazowy/m2cal.appinstaller`">"
+            '  <MainPackage'
+            "      Name=`"$nazwa`""
+            "      Publisher=`"$publisher`""
+            "      Version=`"$wersja`""
+            '      ProcessorArchitecture="x64"'
+            "      Uri=`"$bazowy/$nazwaMsix`" />"
+            '  <UpdateSettings>'
+            '    <OnLaunch HoursBetweenUpdateChecks="0" ShowPrompt="true" />'
+            '  </UpdateSettings>'
+            '</AppInstaller>'
+          )
+          Set-Content -Path (Join-Path $wydanie 'm2cal.appinstaller') -Value $appinstaller -Encoding utf8
+
           Get-ChildItem $wydanie | Select-Object Name, Length | Format-Table -AutoSize
-          "msix=$($msix.Name)" >> $env:GITHUB_OUTPUT
+          "msix=$nazwaMsix" >> $env:GITHUB_OUTPUT
 
       - name: Artefakt buildu
         uses: actions/upload-artifact@v4
@@ -175,7 +207,14 @@ jobs:
             ''
             '1. Zainstaluj m2cal-signing.cer w magazynie "Zaufane osoby" komputera'
             '   lokalnego. Wymaga uprawnien administratora, jednorazowo na maszyne.'
-            '2. Zainstaluj plik .msix z zalacznikow.'
+            '2. Otworz m2cal.appinstaller (nie sam plik .msix).'
+            ''
+            'Instalacja przez .appinstaller wlacza automatyczne sprawdzanie aktualizacji'
+            'przy kazdym uruchomieniu. Nowa wersja instaluje sie po potwierdzeniu przez'
+            'operatora - swiadomie, bo zmiana wersji syntezy bodzcow uniewaznia kalibracje.'
+            ''
+            'Stanowiska, na ktorych zainstalowano wczesniej sam plik .msix, trzeba raz'
+            'przeinstalowac z .appinstaller - inaczej nie beda sie aktualizowac.'
             ''
             'Pakiet jest podpisany certyfikatem wlasnym, dlatego krok 1 jest konieczny.'
             ''

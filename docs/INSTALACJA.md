@@ -27,19 +27,34 @@ Get-ChildItem Cert:\LocalMachine\TrustedPeople | Where-Object Subject -like '*Ol
 
 ## 2. Instalacja aplikacji
 
+Otwórz **`m2cal.appinstaller`** — nie sam plik `.msix`. Wybór ma znaczenie: tylko
+instalacja przez `.appinstaller` włącza automatyczne sprawdzanie aktualizacji.
+
+Można kliknąć plik dwukrotnie albo wskazać adres bezpośrednio:
+
 ```powershell
-Add-AppxPackage -Path .\M2Cal.Uwp_<wersja>_x64.msix
+Add-AppxPackage -AppInstallerFile https://github.com/GrzegorzOle/m2cal/releases/latest/download/m2cal.appinstaller
 ```
 
-Można też kliknąć plik `.msix` dwukrotnie i użyć Instalatora aplikacji.
-
-Aplikacja pojawi się w menu Start jako **m2cal — wzorcowanie toru**.
+Aplikacja pojawi się w menu Start jako **m2cal — wzorcowanie toru** i wystartuje
+na pełnym ekranie. Wyjście z trybu pełnoekranowego: **Shift + Win + Enter** albo
+najechanie kursorem na górną krawędź ekranu.
 
 ## 3. Aktualizacja
 
-Nowsze wydanie instaluje się tą samą komendą — pakiet o tej samej tożsamości
-zostanie podmieniony. Certyfikatu nie trzeba instalować ponownie, dopóki nie
-wygaśnie ani nie zostanie wymieniony.
+Dzieje się sama. Przy każdym uruchomieniu Windows sprawdza, czy w wydaniach jest
+nowsza wersja, i **pyta operatora o zgodę** przed jej zainstalowaniem.
+
+Monit jest włączony celowo, a nie z ostrożności technicznej: zmiana wersji syntezy
+bodźców unieważnia plik kalibracyjny. Operator ma się dowiedzieć, że wersja się
+zmieniła, zamiast odkryć to dopiero wtedy, gdy bramka dopuszczenia odrzuci
+kalibrację w środku serii badań.
+
+Certyfikatu nie trzeba instalować ponownie, dopóki nie wygaśnie.
+
+**Stanowiska zainstalowane wcześniej z samego pliku `.msix` nie będą się
+aktualizować.** Trzeba je raz przeinstalować z `.appinstaller`; danych to nie
+narusza, bo tożsamość pakietu się nie zmienia.
 
 ## 4. Odinstalowanie
 

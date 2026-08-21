@@ -187,6 +187,12 @@ raz zainstalować część jawną certyfikatu jako zaufaną — szczegóły w
 [`docs/INSTALACJA.md`](docs/INSTALACJA.md). Bez tego instalacja kończy się błędem
 `0x800B0109`.
 
+Wydanie zawiera też plik `m2cal.appinstaller`. Instalacja z niego (a nie wprost
+z `.msix`) włącza sprawdzanie aktualizacji przy każdym uruchomieniu. Nowa wersja
+instaluje się **po potwierdzeniu przez operatora** — świadomie, bo zmiana wersji
+syntezy bodźców unieważnia kalibrację i operator ma się o tym dowiedzieć, zanim
+bramka dopuszczenia odrzuci plik w środku serii badań.
+
 ## Integracja z aplikacją UWP
 
 1. **Dodaj referencję do `M2Cal.Core`** (netstandard2.0, jedyna zależność:

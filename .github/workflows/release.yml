@@ -1,0 +1,164 @@
+name: Pakiet instalacyjny
+
+# Pakiet powstaje wyłącznie z taga wersji. Numer wersji trafia do manifestu, a stamtąd
+# do pliku kalibracyjnego — musi być świadomy i policzalny, a nie efekt uboczny pusha.
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  pakiet:
+    # Obraz przypięty na sztywno: budowanie UWP wymaga obciążenia „Universal Windows
+    # Platform build tools" i .NET Native, których nowsze obrazy nie muszą zawierać.
+    runs-on: windows-2022
+
+    steps:
+      - name: Pobranie kodu
+        uses: actions/checkout@v4
+
+      - name: MSBuild
+        uses: microsoft/setup-msbuild@v2
+
+      - name: .NET (do selftestu)
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Kontrola wstępna narzędzi UWP
+        shell: pwsh
+        run: |
+          $targets = Get-ChildItem 'C:\Program Files*\Microsoft Visual Studio\2022\*\MSBuild\Microsoft\WindowsXaml' -ErrorAction SilentlyContinue
+          if (-not $targets) {
+            throw 'Obraz agenta nie ma narzedzi UWP (Microsoft\WindowsXaml). Wymagane obciazenie "Universal Windows Platform build tools".'
+          }
+          if (-not (Test-Path 'C:\Program Files (x86)\Windows Kits\10\Platforms\UAP\10.0.19041.0')) {
+            throw 'Brak Windows SDK 10.0.19041 wymaganego przez projekt.'
+          }
+          Write-Host 'Narzedzia UWP dostepne.'
+
+      - name: Numer wersji z taga
+        id: wersja
+        shell: pwsh
+        run: |
+          $tag = '${{ github.ref_name }}'
+          $raw = $tag.TrimStart('v')
+          if ($raw -notmatch '^\d+(\.\d+){1,3}$') {
+            throw "Tag '$tag' nie wyglada jak wersja. Oczekiwano np. v0.2.0."
+          }
+
+          # Manifest MSIX wymaga czterech czlonow wersji.
+          $parts = @($raw.Split('.'))
+          while ($parts.Count -lt 4) { $parts += '0' }
+          $version = ($parts[0..3] -join '.')
+
+          $manifestPath = 'src/M2Cal.Uwp/Package.appxmanifest'
+          [xml] $manifest = Get-Content $manifestPath
+          $manifest.Package.Identity.Version = $version
+          $manifest.Save((Resolve-Path $manifestPath))
+
+          Write-Host "Wersja pakietu: $version"
+          "version=$version" >> $env:GITHUB_OUTPUT
+
+      - name: Certyfikat podpisujący
+        shell: pwsh
+        env:
+          CERT_BASE64: ${{ secrets.SIGNING_CERTIFICATE_BASE64 }}
+        run: |
+          if ([string]::IsNullOrWhiteSpace($env:CERT_BASE64)) {
+            throw 'Brak sekretu SIGNING_CERTIFICATE_BASE64. Wygeneruj certyfikat: tools/New-PackageCertificate.ps1'
+          }
+          New-Item -ItemType Directory -Force -Path 'artifacts' | Out-Null
+          [IO.File]::WriteAllBytes("$PWD/artifacts/signing.pfx", [Convert]::FromBase64String($env:CERT_BASE64))
+          Write-Host 'Klucz zapisany.'
+
+      - name: Odtworzenie zależności
+        shell: pwsh
+        run: msbuild motu-m2-cal.sln -t:Restore -p:Configuration=Release -p:Platform=x64
+
+      - name: Selftest przeliczeń
+        shell: pwsh
+        run: dotnet run --project src/M2Cal.Cli -- selftest
+
+      - name: Budowanie i podpisanie pakietu
+        shell: pwsh
+        env:
+          CERT_PASSWORD: ${{ secrets.SIGNING_CERTIFICATE_PASSWORD }}
+        run: |
+          msbuild src/M2Cal.Uwp/M2Cal.Uwp.csproj `
+            -p:Configuration=Release `
+            -p:Platform=x64 `
+            -p:AppxBundle=Never `
+            -p:UapAppxPackageBuildMode=SideloadOnly `
+            -p:AppxPackageSigningEnabled=true `
+            -p:PackageCertificateKeyFile=artifacts/signing.pfx `
+            "-p:PackageCertificatePassword=$env:CERT_PASSWORD"
+          if ($LASTEXITCODE -ne 0) { throw 'Budowanie pakietu nie powiodlo sie.' }
+
+      - name: Zebranie artefaktów
+        id: artefakty
+        shell: pwsh
+        env:
+          CERT_PASSWORD: ${{ secrets.SIGNING_CERTIFICATE_PASSWORD }}
+        run: |
+          $msix = Get-ChildItem -Path 'src/M2Cal.Uwp/AppPackages' -Recurse -Filter '*.msix' |
+                  Sort-Object LastWriteTime -Descending | Select-Object -First 1
+          if (-not $msix) { throw 'Nie znaleziono zbudowanego pakietu .msix.' }
+
+          $wydanie = 'artifacts/wydanie'
+          New-Item -ItemType Directory -Force -Path $wydanie | Out-Null
+          Copy-Item $msix.FullName (Join-Path $wydanie $msix.Name)
+
+          # Czesc jawna certyfikatu jedzie razem z pakietem — bez niej stanowisko nie ma
+          # jak zaufac podpisowi, a instalacja sie nie powiedzie.
+          $haslo = ConvertTo-SecureString $env:CERT_PASSWORD -AsPlainText -Force
+          $cert = Get-PfxCertificate -FilePath 'artifacts/signing.pfx' -Password $haslo
+          Export-Certificate -Cert $cert -FilePath (Join-Path $wydanie 'm2cal-signing.cer') | Out-Null
+
+          Copy-Item 'docs/INSTALACJA.md' $wydanie
+
+          Get-ChildItem $wydanie | Select-Object Name, Length | Format-Table -AutoSize
+          "msix=$($msix.Name)" >> $env:GITHUB_OUTPUT
+
+      - name: Artefakt buildu
+        uses: actions/upload-artifact@v4
+        with:
+          name: m2cal-${{ steps.wersja.outputs.version }}
+          path: artifacts/wydanie/*
+
+      - name: Publikacja wydania
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          # Tresc jako tablica linii, nie here-string: terminator here-stringa musi stac
+          # w pierwszej kolumnie, a tego nie da sie pogodzic z wcieciem bloku YAML.
+          $notatki = @(
+            'Pakiet instalacyjny narzedzia do wzorcowania toru MOTU M2.'
+            ''
+            'Pelna instrukcja: INSTALACJA.md w zalacznikach.'
+            ''
+            'W skrocie, na stanowisku pomiarowym:'
+            ''
+            '1. Zainstaluj m2cal-signing.cer w magazynie "Zaufane osoby" komputera'
+            '   lokalnego. Wymaga uprawnien administratora, jednorazowo na maszyne.'
+            '2. Zainstaluj plik .msix z zalacznikow.'
+            ''
+            'Pakiet jest podpisany certyfikatem wlasnym, dlatego krok 1 jest konieczny.'
+            ''
+            'Wersja pakietu: ${{ steps.wersja.outputs.version }}'
+          )
+          Set-Content -Path 'artifacts/notatki.md' -Value $notatki
+
+          $pliki = Get-ChildItem 'artifacts/wydanie' | ForEach-Object { $_.FullName }
+          gh release create '${{ github.ref_name }}' @pliki `
+            --title 'm2cal ${{ github.ref_name }}' `
+            --notes-file 'artifacts/notatki.md'
+
+      - name: Usunięcie klucza prywatnego
+        if: always()
+        shell: pwsh
+        run: Remove-Item 'artifacts/signing.pfx' -Force -ErrorAction SilentlyContinue

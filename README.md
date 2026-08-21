@@ -150,6 +150,37 @@ działa w Debug i wywraca się dopiero w Release.
 Komendy audio CLI wymagają Windows (WASAPI, tryb współdzielony). `selftest`
 działa wszędzie.
 
+## Pakiet instalacyjny
+
+Wydanie powstaje na GitHubie z **taga wersji** — numer wersji trafia do manifestu
+pakietu, więc musi być świadomy, a nie efektem ubocznym pusha:
+
+```
+git tag v0.2.0
+git push origin v0.2.0
+```
+
+Workflow `.github/workflows/release.yml` uruchamia selftest, buduje konfigurację
+Release x64, podpisuje pakiet i tworzy wydanie z plikami `.msix`, `.cer` oraz
+instrukcją `INSTALACJA.md`. Selftest jest bramką — pakiet nie powstanie, jeśli
+przeliczenia nie przejdą testów.
+
+Przygotowanie jednorazowe:
+
+```powershell
+.\tools\New-PackageCertificate.ps1
+```
+
+Skrypt bierze podmiot certyfikatu z `Package.appxmanifest`, żeby nie dało się ich
+rozjechać, i wypisuje, co wstawić do sekretów repozytorium
+(`SIGNING_CERTIFICATE_BASE64`, `SIGNING_CERTIFICATE_PASSWORD`). Klucz prywatny
+zostaje w `artifacts/`, który jest wykluczony z repozytorium.
+
+Pakiet jest podpisany **certyfikatem własnym**, więc na każdym stanowisku trzeba
+raz zainstalować część jawną certyfikatu jako zaufaną — szczegóły w
+[`docs/INSTALACJA.md`](docs/INSTALACJA.md). Bez tego instalacja kończy się błędem
+`0x800B0109`.
+
 ## Integracja z aplikacją UWP
 
 1. **Dodaj referencję do `M2Cal.Core`** (netstandard2.0, jedyna zależność:

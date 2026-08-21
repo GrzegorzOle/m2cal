@@ -65,6 +65,17 @@ odczytuje wskazanie miernika i zapisuje wiersz:
 | **Kanał** | L albo P — drugi kanał to cyfrowa cisza |
 | **Zmierzony poziom [dB SPL]** | odczyt z miernika klasy 1, wpisywany ręcznie |
 
+Poziom reguluje się wpisem z klawiatury albo przyciskami krokowymi ±1 dB i ±5 dB,
+z ograniczeniem do zakresu −120…0 dBFS. Poziom wolno zmieniać **w trakcie grania** —
+pole i generator pozostają zgodne, więc wskazanie miernika odpowiada temu, co
+zostanie zapisane. Zmiana pozostałych parametrów (częstotliwość, kanał, rodzaj
+bodźca) przerywa ton, bo zmienia jego charakter, a nie samą amplitudę.
+
+Pojedynczy pomiar: ustaw bodziec, **Graj**, odczytaj miernik, wpisz wynik w pole
+zmierzonego poziomu i kliknij **Dodaj pomiar do mapy**. Wiersz pojawia się w tabeli
+po prawej. Dopiero **Zapisz plik kalibracyjny** zapisuje całą mapę na dysk — to
+osobna czynność, wykonywana raz, na końcu sesji.
+
 Każdy zapis daje jeden punkt mapy, a z niego wynika **czułość toru** — poziom
 akustyczny, jaki dałby sinus pełnej skali (`SPL_zmierzone − dBFS_bodźca`).
 Aplikacja pokazuje tę wartość od razu, jeszcze przed zapisem punktu, i ostrzega,

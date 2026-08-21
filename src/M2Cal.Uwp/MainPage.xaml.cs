@@ -25,7 +25,12 @@ namespace M2Cal.Uwp
         private readonly CalibrationFile _calibration = new CalibrationFile();
 
         private IReadOnlyList<RenderDeviceInfo> _devices = new List<RenderDeviceInfo>();
+        private ToneSynthesizer _liveSynth;
         private bool _ready;
+        private bool _suppressInvalidate;
+
+        /// <summary>Dolna granica regulacji. Poniżej tego poziomu bodziec ginie w szumie toru.</summary>
+        private const double MinLevelDbFs = -120.0;
 
         public MainPage()
         {
@@ -131,15 +136,16 @@ namespace M2Cal.Uwp
 
             try
             {
-                _engine.Play(new ToneSynthesizer(_engine.SampleRate)
+                _liveSynth = new ToneSynthesizer(_engine.SampleRate)
                 {
                     FrequencyHz = frequency,
                     LevelDbFs = level,
                     Ear = SelectedEar(),
                     Pulsed = PulsedBox.IsChecked == true,
                     Warble = WarbleBox.IsChecked == true
-                });
+                };
 
+                _engine.Play(_liveSynth);
                 SetPlaybackButtons(playing: true, deviceOpen: true);
             }
             catch (Exception ex)
@@ -151,7 +157,31 @@ namespace M2Cal.Uwp
         private void OnStop(object sender, RoutedEventArgs e)
         {
             _engine.Stop();
+            _liveSynth = null;
             SetPlaybackButtons(playing: false, deviceOpen: true);
+        }
+
+        /// <summary>
+        /// Krokowa regulacja poziomu. Poziom wolno zmieniać w trakcie grania: pole i generator
+        /// pozostają zgodne, więc wskazanie miernika nadal odpowiada temu, co operator zapisze.
+        /// Pozostałe parametry bodźca przerywają ton, bo zmieniają jego charakter, nie amplitudę.
+        /// </summary>
+        private void OnLevelStep(object sender, RoutedEventArgs e)
+        {
+            if (!(sender is FrameworkElement source) || !TryParse(source.Tag as string, out double step))
+                return;
+
+            if (!TryParse(LevelBox.Text, out double level)) level = 0.0;
+
+            double next = Math.Round(Math.Min(0.0, Math.Max(MinLevelDbFs, level + step)), 1);
+
+            _suppressInvalidate = true;
+            LevelBox.Text = next.ToString("0.#", CultureInfo.InvariantCulture);
+            _suppressInvalidate = false;
+
+            if (_liveSynth != null) _liveSynth.LevelDbFs = next;
+
+            UpdateSensitivityPreview();
         }
 
         /// <summary>
@@ -164,11 +194,12 @@ namespace M2Cal.Uwp
 
         private void InvalidateStimulus()
         {
-            if (!_ready) return;
+            if (!_ready || _suppressInvalidate) return;
 
             if (_engine.IsPlaying)
             {
                 _engine.Stop();
+                _liveSynth = null;
                 SetPlaybackButtons(playing: false, deviceOpen: _engine.SampleRate > 0);
             }
 
@@ -181,21 +212,30 @@ namespace M2Cal.Uwp
             UpdateSensitivityPreview();
         }
 
+        /// <summary>
+        /// Przycisk zapisu punktu bywa nieaktywny i bez wyjaśnienia wygląda jak awaria.
+        /// Podpowiedź mówi wprost, czego brakuje, zamiast zostawiać operatora z szarym przyciskiem.
+        /// </summary>
         private void UpdateSensitivityPreview()
         {
-            bool hasStimulus = TryReadStimulus(out _, out double level, out _);
+            bool hasStimulus = TryReadStimulus(out _, out double level, out string stimulusError);
             bool hasMeasurement = TryParse(MeasuredSplBox.Text, out double measured);
+
+            AddPointButton.IsEnabled = hasStimulus && hasMeasurement;
 
             if (hasStimulus && hasMeasurement)
             {
                 SensitivityPreview.Text =
                     $"czułość toru: {measured - level:0.0} dB SPL przy sinusie pełnej skali";
-                AddPointButton.IsEnabled = true;
+            }
+            else if (!hasStimulus)
+            {
+                SensitivityPreview.Text = stimulusError ?? "uzupełnij częstotliwość i poziom bodźca";
             }
             else
             {
-                SensitivityPreview.Text = "czułość toru: —";
-                AddPointButton.IsEnabled = false;
+                SensitivityPreview.Text =
+                    "wpisz odczyt z miernika w dB SPL — wtedy będzie można zapisać punkt";
             }
         }
 
@@ -284,44 +324,47 @@ namespace M2Cal.Uwp
                 return;
             }
 
-            var picker = new FileSavePicker
-            {
-                SuggestedStartLocation = PickerLocationId.DocumentsLibrary,
-                SuggestedFileName = "calibration.m2cal"
-            };
-            picker.FileTypeChoices.Add("Plik kalibracyjny m2cal", new List<string> { ".json" });
-
-            StorageFile file = await picker.PickSaveFileAsync();
-            if (file == null) return;
-
-            _calibration.CreatedAtUtc = DateTime.UtcNow;
-            _calibration.Operator = NullIfBlank(OperatorBox.Text);
-            _calibration.Transducer = NullIfBlank(TransducerBox.Text);
-            _calibration.Coupler = NullIfBlank(CouplerBox.Text);
-            _calibration.Notes = NullIfBlank(NotesBox.Text);
-            _calibration.Device = _engine.Fingerprint(VolumeConfirmedBox.IsChecked == true);
-
+            // Cała ścieżka zapisu jest osłonięta, łącznie z otwarciem okna wyboru pliku.
+            // Wyjątek w `async void` kończy proces, a razem z nim przepada cała sesja pomiarowa.
             try
             {
+                var picker = new FileSavePicker
+                {
+                    SuggestedStartLocation = PickerLocationId.DocumentsLibrary,
+                    SuggestedFileName = "calibration.m2cal"
+                };
+                picker.FileTypeChoices.Add("Plik kalibracyjny m2cal", new List<string> { ".json" });
+
+                StorageFile file = await picker.PickSaveFileAsync();
+                if (file == null) return;
+
+                _calibration.CreatedAtUtc = DateTime.UtcNow;
+                _calibration.Operator = NullIfBlank(OperatorBox.Text);
+                _calibration.Transducer = NullIfBlank(TransducerBox.Text);
+                _calibration.Coupler = NullIfBlank(CouplerBox.Text);
+                _calibration.Notes = NullIfBlank(NotesBox.Text);
+                _calibration.Device = _engine.Fingerprint(VolumeConfirmedBox.IsChecked == true);
+
                 await FileIO.WriteTextAsync(file, CalibrationStore.Serialize(_calibration));
                 UpdateStatus($"zapisano {_calibration.Points.Count} punktów do {file.Name}");
             }
             catch (Exception ex)
             {
-                UpdateStatus("nie udało się zapisać pliku: " + ex.Message);
+                App.Log("OnSaveFile", ex);
+                UpdateStatus($"nie udało się zapisać pliku: {ex.GetType().Name} — {ex.Message}");
             }
         }
 
         private async void OnLoadFile(object sender, RoutedEventArgs e)
         {
-            var picker = new FileOpenPicker { SuggestedStartLocation = PickerLocationId.DocumentsLibrary };
-            picker.FileTypeFilter.Add(".json");
-
-            StorageFile file = await picker.PickSingleFileAsync();
-            if (file == null) return;
-
             try
             {
+                var picker = new FileOpenPicker { SuggestedStartLocation = PickerLocationId.DocumentsLibrary };
+                picker.FileTypeFilter.Add(".json");
+
+                StorageFile file = await picker.PickSingleFileAsync();
+                if (file == null) return;
+
                 var loaded = CalibrationStore.Deserialize(await FileIO.ReadTextAsync(file));
 
                 _calibration.Points.Clear();
@@ -345,7 +388,8 @@ namespace M2Cal.Uwp
             }
             catch (Exception ex)
             {
-                UpdateStatus("nie udało się wczytać pliku: " + ex.Message);
+                App.Log("OnLoadFile", ex);
+                UpdateStatus($"nie udało się wczytać pliku: {ex.GetType().Name} — {ex.Message}");
             }
         }
 

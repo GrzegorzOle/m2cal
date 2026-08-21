@@ -12,7 +12,15 @@ namespace M2Cal.Uwp
         {
             InitializeComponent();
             Suspending += OnSuspending;
-            UnhandledException += (s, e) => Log("UnhandledException", e.Exception);
+            UnhandledException += (s, e) =>
+            {
+                Log("UnhandledException", e.Exception);
+
+                // Świadomy kompromis: przerwanie procesu kasuje całą sesję pomiarową, a operator
+                // musiałby powtórzyć wzorcowanie od zera. Lepiej zostawić okno przy życiu i zapisać
+                // przyczynę do dziennika niż stracić zmierzone punkty.
+                e.Handled = true;
+            };
         }
 
         protected override void OnLaunched(LaunchActivatedEventArgs e)

@@ -67,7 +67,20 @@
                 <TextBox x:Name="FrequencyBox" Text="1000" InputScope="Number" TextChanged="OnStimulusTextChanged" />
 
                 <TextBlock Text="Poziom sygnału [dBFS]" Style="{StaticResource FieldLabel}" Margin="0,12,0,2" />
-                <TextBox x:Name="LevelBox" Text="-20" InputScope="Number" TextChanged="OnStimulusTextChanged" />
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <TextBox x:Name="LevelBox" Grid.Column="0" Text="-20" InputScope="Number"
+                             TextChanged="OnStimulusTextChanged" />
+                    <StackPanel Grid.Column="1" Orientation="Horizontal" Margin="8,0,0,0">
+                        <Button Content="−5" Tag="-5" Width="42" Click="OnLevelStep" />
+                        <Button Content="−1" Tag="-1" Width="42" Margin="4,0,0,0" Click="OnLevelStep" />
+                        <Button Content="+1" Tag="1"  Width="42" Margin="4,0,0,0" Click="OnLevelStep" />
+                        <Button Content="+5" Tag="5"  Width="42" Margin="4,0,0,0" Click="OnLevelStep" />
+                    </StackPanel>
+                </Grid>
 
                 <TextBlock Text="Kanał" Style="{StaticResource FieldLabel}" Margin="0,12,0,2" />
                 <StackPanel Orientation="Horizontal">
@@ -106,7 +119,7 @@
                 <TextBox x:Name="NoteBox" PlaceholderText="np. powtórka po poprawieniu osadzenia" />
 
                 <Button x:Name="AddPointButton"
-                        Content="Zapisz punkt do mapy"
+                        Content="Dodaj pomiar do mapy  →"
                         HorizontalAlignment="Stretch"
                         Margin="0,12,0,0"
                         Click="OnAddPoint"
@@ -190,9 +203,9 @@
             </ListView>
 
             <StackPanel Grid.Row="3" Orientation="Horizontal" Margin="0,12,0,0">
-                <Button Content="Usuń zaznaczony" Click="OnRemovePoint" />
-                <Button Content="Wczytaj mapę" Margin="8,0,0,0" Click="OnLoadFile" />
-                <Button Content="Zapisz mapę" Margin="8,0,0,0" Click="OnSaveFile" />
+                <Button Content="Usuń zaznaczony wiersz" Click="OnRemovePoint" />
+                <Button Content="Wczytaj plik kalibracyjny" Margin="8,0,0,0" Click="OnLoadFile" />
+                <Button Content="Zapisz plik kalibracyjny" Margin="8,0,0,0" Click="OnSaveFile" />
             </StackPanel>
         </Grid>
 

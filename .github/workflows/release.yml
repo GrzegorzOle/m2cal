@@ -67,13 +67,43 @@ jobs:
         shell: pwsh
         env:
           CERT_BASE64: ${{ secrets.SIGNING_CERTIFICATE_BASE64 }}
+          CERT_PASSWORD: ${{ secrets.SIGNING_CERTIFICATE_PASSWORD }}
         run: |
           if ([string]::IsNullOrWhiteSpace($env:CERT_BASE64)) {
             throw 'Brak sekretu SIGNING_CERTIFICATE_BASE64. Wygeneruj certyfikat: tools/New-PackageCertificate.ps1'
           }
+          if ([string]::IsNullOrWhiteSpace($env:CERT_PASSWORD)) {
+            throw 'Brak sekretu SIGNING_CERTIFICATE_PASSWORD.'
+          }
+
           New-Item -ItemType Directory -Force -Path 'artifacts' | Out-Null
-          [IO.File]::WriteAllBytes("$PWD/artifacts/signing.pfx", [Convert]::FromBase64String($env:CERT_BASE64))
-          Write-Host 'Klucz zapisany.'
+
+          # Sciezka MUSI byc bezwzgledna: MSBuild rozwija PackageCertificateKeyFile wzgledem
+          # katalogu projektu (src/M2Cal.Uwp), a nie katalogu roboczego przebiegu.
+          $pfx = Join-Path (Get-Location).Path 'artifacts\signing.pfx'
+
+          try {
+            [IO.File]::WriteAllBytes($pfx, [Convert]::FromBase64String($env:CERT_BASE64))
+          } catch {
+            throw 'SIGNING_CERTIFICATE_BASE64 nie jest poprawnym base64. Wklej cala zawartosc pliku .base64.txt, bez spacji i lamania linii.'
+          }
+
+          # Sprawdzenie od razu, zeby blad certyfikatu nie wyszedl dopiero po kilku minutach budowania.
+          try {
+            $haslo = ConvertTo-SecureString $env:CERT_PASSWORD -AsPlainText -Force
+            $cert = Get-PfxCertificate -FilePath $pfx -Password $haslo -ErrorAction Stop
+          } catch {
+            throw 'Nie udalo sie otworzyc klucza. Najczestsza przyczyna: SIGNING_CERTIFICATE_PASSWORD nie pasuje do .pfx.'
+          }
+
+          [xml] $manifest = Get-Content 'src/M2Cal.Uwp/Package.appxmanifest'
+          $publisher = $manifest.Package.Identity.Publisher
+          if ($cert.Subject -ne $publisher) {
+            throw "Podmiot certyfikatu '$($cert.Subject)' rozni sie od Publisher w manifescie '$publisher'. Tak podpisanego pakietu nie da sie zainstalowac."
+          }
+
+          Write-Host "Klucz OK. Podmiot: $($cert.Subject), wazny do $($cert.NotAfter.ToString('yyyy-MM-dd'))"
+          "CERT_PATH=$pfx" >> $env:GITHUB_ENV
 
       - name: Odtworzenie zależności
         shell: pwsh
@@ -94,7 +124,7 @@ jobs:
             -p:AppxBundle=Never `
             -p:UapAppxPackageBuildMode=SideloadOnly `
             -p:AppxPackageSigningEnabled=true `
-            -p:PackageCertificateKeyFile=artifacts/signing.pfx `
+            "-p:PackageCertificateKeyFile=$env:CERT_PATH" `
             "-p:PackageCertificatePassword=$env:CERT_PASSWORD"
           if ($LASTEXITCODE -ne 0) { throw 'Budowanie pakietu nie powiodlo sie.' }
 
@@ -115,7 +145,7 @@ jobs:
           # Czesc jawna certyfikatu jedzie razem z pakietem — bez niej stanowisko nie ma
           # jak zaufac podpisowi, a instalacja sie nie powiedzie.
           $haslo = ConvertTo-SecureString $env:CERT_PASSWORD -AsPlainText -Force
-          $cert = Get-PfxCertificate -FilePath 'artifacts/signing.pfx' -Password $haslo
+          $cert = Get-PfxCertificate -FilePath $env:CERT_PATH -Password $haslo
           Export-Certificate -Cert $cert -FilePath (Join-Path $wydanie 'm2cal-signing.cer') | Out-Null
 
           Copy-Item 'docs/INSTALACJA.md' $wydanie
@@ -161,4 +191,4 @@ jobs:
       - name: Usunięcie klucza prywatnego
         if: always()
         shell: pwsh
-        run: Remove-Item 'artifacts/signing.pfx' -Force -ErrorAction SilentlyContinue
+        run: Remove-Item $env:CERT_PATH -Force -ErrorAction SilentlyContinue

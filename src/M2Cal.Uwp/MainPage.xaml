@@ -383,6 +383,8 @@
             <ListView x:Name="PointsList"
                       Grid.Row="2"
                       SelectionMode="Single"
+                      IsDoubleTapEnabled="True"
+                      DoubleTapped="OnPointsListDoubleTapped"
                       ScrollViewer.HorizontalScrollMode="Disabled">
                 <ListView.ItemContainerStyle>
                     <Style TargetType="ListViewItem">
@@ -410,10 +412,17 @@
                 </ListView.ItemTemplate>
             </ListView>
 
-            <StackPanel Grid.Row="3" Orientation="Horizontal" Margin="0,12,0,0">
-                <Button Content="Usuń zaznaczony wiersz" Click="OnRemovePoint" />
-                <Button Content="Wczytaj plik kalibracyjny" Margin="8,0,0,0" Click="OnLoadFile" />
-                <Button Content="Zapisz plik kalibracyjny" Margin="8,0,0,0" Click="OnSaveFile" />
+            <StackPanel Grid.Row="3" Margin="0,12,0,0">
+                <TextBlock Text="Zaznacz wiersz, aby odtworzyć zapisany bodziec do sprawdzenia. Odtwarzanie z mapy nie zmienia formularza."
+                           Style="{StaticResource FieldLabel}"
+                           TextWrapping="Wrap"
+                           Margin="0,0,0,6" />
+                <StackPanel Orientation="Horizontal">
+                    <Button x:Name="PlaySelectedButton" Content="Odtwórz zaznaczony" Click="OnPlaySelected" />
+                    <Button Content="Usuń zaznaczony wiersz" Margin="8,0,0,0" Click="OnRemovePoint" />
+                    <Button Content="Wczytaj plik kalibracyjny" Margin="24,0,0,0" Click="OnLoadFile" />
+                    <Button Content="Zapisz plik kalibracyjny" Margin="8,0,0,0" Click="OnSaveFile" />
+                </StackPanel>
             </StackPanel>
         </Grid>
 

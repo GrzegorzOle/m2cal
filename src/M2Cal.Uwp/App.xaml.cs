@@ -28,9 +28,10 @@ namespace M2Cal.Uwp
         {
             try
             {
-                // Wzorcowanie prowadzi sie na pelnym ekranie: mapa pomiarow miesci wtedy komplet
-                // punktow bez przewijania, a nic nie odciaga uwagi operatora od odczytu miernika.
-                ApplicationView.PreferredLaunchWindowingMode = ApplicationViewWindowingMode.FullScreen;
+                // Okno zmaksymalizowane, a NIE pelnoekranowe. Pelny ekran ukrywa pasek tytulu
+                // razem z przyciskami minimalizacji i zamkniecia, co przy pracy zdalnej odcina
+                // jedyna droge wyjscia. Pelny ekran zostaje dostepny z przycisku w oknie.
+                ApplicationView.PreferredLaunchWindowingMode = ApplicationViewWindowingMode.Maximized;
 
                 if (!(Window.Current.Content is Frame rootFrame))
                 {
@@ -44,9 +45,12 @@ namespace M2Cal.Uwp
 
                 Window.Current.Activate();
 
-                // PreferredLaunchWindowingMode dziala od kolejnego uruchomienia, wiec pierwsze
-                // po instalacji trzeba przelaczyc jawnie.
-                ApplicationView.GetForCurrentView().TryEnterFullScreenMode();
+                // PreferredLaunchWindowingMode dziala od kolejnego uruchomienia. Pierwsze po
+                // aktualizacji z wersji pelnoekranowej trzeba przelaczyc jawnie, inaczej okno
+                // zostaje bez paska tytulu.
+                var view = ApplicationView.GetForCurrentView();
+                if (view.IsFullScreenMode) view.ExitFullScreenMode();
+                view.TryResizeView(new Windows.Foundation.Size(1600, 1000));
             }
             catch (System.Exception ex)
             {

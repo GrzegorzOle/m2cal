@@ -37,14 +37,15 @@ przypomina, że poniżej są dalsze pola.
 
 ## Okno programu
 
-Aplikacja startuje na pełnym ekranie — mapa mieści wtedy komplet punktów bez
-przewijania.
+Aplikacja startuje w **zmaksymalizowanym oknie**, z normalnym paskiem tytułu —
+przyciski minimalizacji, przywracania i zamknięcia są na swoim miejscu.
 
 | Element | Działanie |
 | --- | --- |
-| **Tryb okna** (prawy górny róg) | Przełącza pełny ekran ↔ okno. Przy pracy zdalnej pasek tytułu bywa niewidoczny i bez tego przycisku nie da się zmienić rozmiaru okna. |
+| **Pełny ekran** (prawy górny róg) | Przechodzi na pełny ekran; przycisk zmienia się wtedy w **Tryb okna**. Na pełnym ekranie pasek tytułu znika, więc do wyjścia służy ten sam przycisk, Esc albo Alt + F4. |
 | **Zakończ** | Zamyka program. |
 | Klawisz **Esc** | To samo co „Zakończ". |
+| **Alt + F4** | Standardowe zamknięcie okna Windows. |
 
 Jeśli w mapie są pomiary, których nie zapisano do pliku, program **zapyta przed
 zamknięciem** i pozwoli zapisać. Dotyczy to każdej drogi wyjścia — przycisku,
@@ -125,6 +126,23 @@ szary, linijka nad nim mówi, czego brakuje.
 Tę samą częstotliwość możesz zmierzyć przy kilku poziomach — rozrzut wynikającej
 z nich czułości jest miarą nieliniowości toru. Rozrzut powyżej 2 dB jest
 sygnalizowany i zwykle oznacza przesuniętą słuchawkę, a nie wadę toru.
+
+## MAPA POMIARÓW (prawa kolumna)
+
+| Przycisk | Działanie |
+| --- | --- |
+| **Odtwórz zaznaczony** | Odtwarza bodziec zapisany w zaznaczonym wierszu — tę samą częstotliwość, poziom i kanał. To samo robi dwukrotne kliknięcie wiersza. |
+| **Usuń zaznaczony wiersz** | Usuwa błędny zapis z mapy. |
+| **Wczytaj / Zapisz plik kalibracyjny** | Operacje na pliku. |
+
+Odtwarzanie z mapy służy do **sprawdzania bez edycji**: pola formularza pozostają
+nietknięte, więc kolejny zapisany punkt nadal opisuje to, co ustawiłeś, a nie to,
+czego przed chwilą słuchałeś. Pasek stanu pokazuje, który punkt gra, razem
+z zapisanym dla niego odczytem miernika — dzięki temu wracasz do wątpliwego pomiaru,
+powtarzasz odczyt i albo go potwierdzasz, albo usuwasz wiersz i mierzysz od nowa.
+
+Regulacja poziomu przyciskami `±1 / ±5` **zatrzymuje** odtwarzanie z mapy. Inaczej
+zmieniałbyś poziom czegoś innego, niż pokazuje formularz.
 
 ## SESJA
 

@@ -37,9 +37,12 @@ Add-AppxPackage -AppInstallerFile https://github.com/GrzegorzOle/m2cal/releases/
 ```
 
 Aplikacja pojawi się w menu Start jako **m2cal — wzorcowanie toru** i wystartuje
-na pełnym ekranie. W prawym górnym rogu są przyciski **Tryb okna** i **Zakończ** —
-przydatne przy pracy zdalnej, gdzie pasek tytułu bywa niewidoczny. Program zamyka
-też klawisz **Esc**.
+w **zmaksymalizowanym oknie** — z normalnym paskiem tytułu, czyli z przyciskami
+minimalizacji, przywracania i zamknięcia. Tryb pełnoekranowy jest dostępny
+z przycisku **Pełny ekran** w prawym górnym rogu.
+
+Dodatkowe drogi wyjścia, przydatne przy pracy zdalnej: przycisk **Zakończ**,
+klawisz **Esc** oraz **Alt + F4**.
 
 ## 3. Zanim zaczniesz wzorcowanie
 

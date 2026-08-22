@@ -42,6 +42,13 @@ namespace M2Cal.Uwp
         /// <summary>Czy w mapie są pomiary, których nie zapisano do pliku.</summary>
         private bool _dirty;
 
+        /// <summary>
+        /// Czy brzmiący bodziec pochodzi z zaznaczonego wiersza mapy, a nie z formularza.
+        /// Rozróżnienie jest istotne: przy odtwarzaniu z mapy pola formularza nie opisują tego,
+        /// co słychać, więc regulacja poziomu nie może po cichu zmieniać zapisanego punktu.
+        /// </summary>
+        private bool _playbackFromMap;
+
         /// <summary>Dolna granica regulacji. Poniżej tego poziomu bodziec ginie w szumie toru.</summary>
         private const double MinLevelDbFs = -120.0;
 
@@ -165,6 +172,7 @@ namespace M2Cal.Uwp
                     Warble = WarbleBox.IsChecked == true
                 };
 
+                _playbackFromMap = false;
                 _engine.Play(_liveSynth);
                 SetPlaybackButtons(playing: true, deviceOpen: true);
             }
@@ -178,6 +186,7 @@ namespace M2Cal.Uwp
         {
             _engine.Stop();
             _liveSynth = null;
+            _playbackFromMap = false;
             SetPlaybackButtons(playing: false, deviceOpen: true);
         }
 
@@ -190,6 +199,10 @@ namespace M2Cal.Uwp
         {
             if (!(sender is FrameworkElement source) || !TryParse(source.Tag as string, out double step))
                 return;
+
+            // Bodziec z mapy nie odpowiada polom formularza, wiec regulacja poziomu najpierw
+            // go zatrzymuje — inaczej operator zmienialby poziom czegos innego, niz widzi.
+            if (_playbackFromMap) InvalidateStimulus();
 
             if (!TryParse(LevelBox.Text, out double level)) level = 0.0;
 
@@ -220,6 +233,7 @@ namespace M2Cal.Uwp
             {
                 _engine.Stop();
                 _liveSynth = null;
+                _playbackFromMap = false;
                 SetPlaybackButtons(playing: false, deviceOpen: _engine.SampleRate > 0);
             }
 
@@ -320,6 +334,53 @@ namespace M2Cal.Uwp
             MeasuredSplBox.Text = string.Empty;
             NoteBox.Text = string.Empty;
         }
+
+        /// <summary>
+        /// Odtwarza bodziec zapisany w zaznaczonym wierszu — do sprawdzenia mapy bez jej edycji.
+        /// Formularz zostaje nietknięty, więc kolejny zapisany punkt nadal opisuje to, co
+        /// operator ustawił, a nie to, czego przed chwilą słuchał.
+        /// </summary>
+        private void OnPlaySelected(object sender, RoutedEventArgs e)
+        {
+            if (!(PointsList.SelectedItem is CalibrationPointRow row))
+            {
+                UpdateStatus("zaznacz wiersz w mapie, żeby go odtworzyć");
+                return;
+            }
+
+            if (_engine.SampleRate == 0)
+            {
+                UpdateStatus("otwórz tor, zanim odtworzysz bodziec z mapy");
+                return;
+            }
+
+            var point = row.Point;
+
+            try
+            {
+                _liveSynth = new ToneSynthesizer(_engine.SampleRate)
+                {
+                    FrequencyHz = point.FrequencyHz,
+                    LevelDbFs = point.StimulusDbFs,
+                    Ear = point.EarValue
+                };
+
+                _playbackFromMap = true;
+                _engine.Play(_liveSynth);
+                SetPlaybackButtons(playing: true, deviceOpen: true);
+
+                UpdateStatus($"z mapy: {point.FrequencyHz:0} Hz, {point.StimulusDbFs:0.0} dBFS, " +
+                             $"kanał {point.Ear} (zmierzono {point.MeasuredSpl:0.0} dB SPL)");
+            }
+            catch (Exception ex)
+            {
+                App.Log("OnPlaySelected", ex);
+                UpdateStatus("nie udało się odtworzyć bodźca z mapy: " + ex.Message);
+            }
+        }
+
+        private void OnPointsListDoubleTapped(object sender, DoubleTappedRoutedEventArgs e) =>
+            OnPlaySelected(sender, null);
 
         private void OnRemovePoint(object sender, RoutedEventArgs e)
         {

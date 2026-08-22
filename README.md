@@ -53,6 +53,17 @@ Przykład: `refDbFs = −20`, zmierzono 74 dB SPL przy 1 kHz, RETSPL(1 kHz) = 7 
 przesiewowe wypadają głęboko pod pełną skalą — dlatego głośność endpointu ma stać
 na 100%, a cała regulacja poziomu odbywa się w dBFS.
 
+## Dokumentacja
+
+| Dokument | Dla kogo |
+| --- | --- |
+| [`docs/INSTRUKCJA_OPERATORA.md`](docs/INSTRUKCJA_OPERATORA.md) | Operator przy stanowisku — każde pole formularza, jednostki, sposób wpisywania wartości |
+| [`docs/FORMAT_PLIKU.md`](docs/FORMAT_PLIKU.md) | Autorzy aplikacji docelowej i opis metody w publikacji — format pliku kalibracyjnego |
+| [`docs/INSTALACJA.md`](docs/INSTALACJA.md) | Instalacja i aktualizacja pakietu na stanowisku |
+
+Wszystkie trzy jadą razem z pakietem instalacyjnym — operator na stanowisku nie
+ma dostępu do repozytorium.
+
 ## Aplikacja wzorcująca (GUI)
 
 `M2Cal.Uwp` to ekran, na którym powstaje mapa pomiarów. Operator ustawia bodziec,

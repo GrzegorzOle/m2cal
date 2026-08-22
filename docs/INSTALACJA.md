@@ -40,7 +40,22 @@ Aplikacja pojawi się w menu Start jako **m2cal — wzorcowanie toru** i wystart
 na pełnym ekranie. Wyjście z trybu pełnoekranowego: **Shift + Win + Enter** albo
 najechanie kursorem na górną krawędź ekranu.
 
-## 3. Aktualizacja
+## 3. Zanim zaczniesz wzorcowanie
+
+Przeczytaj **`INSTRUKCJA_OPERATORA.md`** — dołączona do tego samego wydania.
+Opisuje każde pole formularza, jednostki i sposób wpisywania wartości, a także to,
+co trzeba przygotować przed sesją (głośność endpointu, pozycja pokręteł M2,
+sprawdzenie kalibratorem).
+
+Pozostałe załączniki wydania:
+
+| Plik | Do czego służy |
+| --- | --- |
+| `INSTRUKCJA_OPERATORA.md` | Obsługa aplikacji przy wzorcowaniu. **Zacznij od tego.** |
+| `FORMAT_PLIKU.md` | Format pliku kalibracyjnego — dla autorów aplikacji docelowej i do opisu metody w publikacji. |
+| `wzorzec-pliku-kalibracyjnego.json` | Wzorzec z kompletem pól, generowany z kodu narzędzia. |
+
+## 4. Aktualizacja
 
 Dzieje się sama. Przy każdym uruchomieniu Windows sprawdza, czy w wydaniach jest
 nowsza wersja, i **pyta operatora o zgodę** przed jej zainstalowaniem.
@@ -56,7 +71,7 @@ Certyfikatu nie trzeba instalować ponownie, dopóki nie wygaśnie.
 aktualizować.** Trzeba je raz przeinstalować z `.appinstaller`; danych to nie
 narusza, bo tożsamość pakietu się nie zmienia.
 
-## 4. Odinstalowanie
+## 5. Odinstalowanie
 
 ```powershell
 Get-AppxPackage -Name eu.cdest.m2cal | Remove-AppxPackage

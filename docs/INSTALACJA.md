@@ -37,8 +37,9 @@ Add-AppxPackage -AppInstallerFile https://github.com/GrzegorzOle/m2cal/releases/
 ```
 
 Aplikacja pojawi się w menu Start jako **m2cal — wzorcowanie toru** i wystartuje
-na pełnym ekranie. Wyjście z trybu pełnoekranowego: **Shift + Win + Enter** albo
-najechanie kursorem na górną krawędź ekranu.
+na pełnym ekranie. W prawym górnym rogu są przyciski **Tryb okna** i **Zakończ** —
+przydatne przy pracy zdalnej, gdzie pasek tytułu bywa niewidoczny. Program zamyka
+też klawisz **Esc**.
 
 ## 3. Zanim zaczniesz wzorcowanie
 
@@ -57,13 +58,18 @@ Pozostałe załączniki wydania:
 
 ## 4. Aktualizacja
 
-Dzieje się sama. Przy każdym uruchomieniu Windows sprawdza, czy w wydaniach jest
-nowsza wersja, i **pyta operatora o zgodę** przed jej zainstalowaniem.
+Przy każdym uruchomieniu aplikacja sprawdza, czy w wydaniach jest nowsza wersja.
+Jeśli jest, u góry okna pojawia się pasek z przyciskiem **Aktualizuj** oraz
+**Później**.
 
-Monit jest włączony celowo, a nie z ostrożności technicznej: zmiana wersji syntezy
-bodźców unieważnia plik kalibracyjny. Operator ma się dowiedzieć, że wersja się
-zmieniła, zamiast odkryć to dopiero wtedy, gdy bramka dopuszczenia odrzuci
-kalibrację w środku serii badań.
+Systemowe okno Instalatora aplikacji jest wyłączone — jego treści ani opisów
+przycisków nie da się zmienić, a „Update / Not now" nie mówi operatorowi tego, co
+powinien wiedzieć. Pasek w aplikacji przypomina, żeby **najpierw zapisać mapę**:
+aktualizacja zamyka program.
+
+Numer aktualnie działającej wersji jest zawsze widoczny na pasku stanu, na dole
+okna. Ma to znaczenie metrologiczne: zmiana wersji syntezy bodźców unieważnia plik
+kalibracyjny, więc operator musi wiedzieć, którą wersją prowadził sesję.
 
 Certyfikatu nie trzeba instalować ponownie, dopóki nie wygaśnie.
 

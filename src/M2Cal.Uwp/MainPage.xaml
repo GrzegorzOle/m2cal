@@ -22,6 +22,11 @@
         </Style>
     </Page.Resources>
 
+    <Page.KeyboardAccelerators>
+        <!-- Praca zdalna na pełnym ekranie: bez paska tytułu nie ma czym zamknąć okna. -->
+        <KeyboardAccelerator Key="Escape" Invoked="OnEscapePressed" />
+    </Page.KeyboardAccelerators>
+
     <Grid Padding="20">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
@@ -35,7 +40,45 @@
 
         <!-- ── Tor audio ─────────────────────────────────────────────────── -->
         <StackPanel Grid.Row="0" Grid.ColumnSpan="2" Margin="0,0,0,16">
-            <TextBlock Text="TOR AUDIO" Style="{StaticResource SectionHeader}" />
+
+            <!-- Pasek aktualizacji: własny, bo tekstu systemowego okna Instalatora aplikacji
+                 nie da się zmienić. Ukryty, dopóki nie ma nowszej wersji. -->
+            <Border x:Name="UpdateBar"
+                    Visibility="Collapsed"
+                    Background="{ThemeResource SystemControlBackgroundAccentBrush}"
+                    CornerRadius="4"
+                    Padding="12,8"
+                    Margin="0,0,0,12">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <TextBlock x:Name="UpdateText"
+                               Grid.Column="0"
+                               VerticalAlignment="Center"
+                               TextWrapping="Wrap"
+                               Text="Dostępna jest nowsza wersja aplikacji." />
+                    <Button Grid.Column="1" Content="Aktualizuj" Margin="12,0,0,0" Click="OnUpdateNow" />
+                    <Button Grid.Column="2" Content="Później" Margin="8,0,0,0" Click="OnUpdateLater" />
+                </Grid>
+            </Border>
+
+            <Grid Margin="0,0,0,8">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <TextBlock Grid.Column="0" Text="TOR AUDIO" Style="{StaticResource SectionHeader}" VerticalAlignment="Center" />
+                <Button x:Name="FullScreenButton"
+                        Grid.Column="1"
+                        Content="Tryb okna"
+                        Margin="8,0,0,0"
+                        Click="OnToggleFullScreen" />
+                <Button Grid.Column="2" Content="Zakończ" Margin="8,0,0,0" Click="OnExitRequested" />
+            </Grid>
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*" />

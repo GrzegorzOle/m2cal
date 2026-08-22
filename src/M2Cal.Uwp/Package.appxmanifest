@@ -3,12 +3,13 @@
   xmlns="http://schemas.microsoft.com/appx/manifest/foundation/windows10"
   xmlns:mp="http://schemas.microsoft.com/appx/2014/phone/manifest"
   xmlns:uap="http://schemas.microsoft.com/appx/manifest/uap/windows10"
-  IgnorableNamespaces="uap mp">
+  xmlns:rescap="http://schemas.microsoft.com/appx/manifest/foundation/windows10/restrictedcapabilities"
+  IgnorableNamespaces="uap mp rescap">
 
   <Identity
     Name="eu.cdest.m2cal"
     Publisher="CN=Grzegorz Oleksy"
-    Version="1.1.0.4" />
+    Version="1.1.0.5" />
 
   <mp:PhoneIdentity PhoneProductId="6b2a1c4e-9e31-4a5e-9f2b-3d1c7a0f5e82" PhonePublisherId="00000000-0000-0000-0000-000000000000" />
 
@@ -42,7 +43,10 @@
     </Application>
   </Applications>
 
-  <!-- Bez dodatkowych uprawnień: plik kalibracyjny zapisywany i wczytywany
-       przez FileSavePicker / FileOpenPicker, urządzenia audio przez AudioGraph. -->
-  <Capabilities />
+  <Capabilities>
+    <!-- Pozwala przechwycić zamknięcie okna i zapytać o niezapisane pomiary. Bez tego
+         zamknięcie kasuje całą sesję bez ostrzeżenia. Uprawnienie zastrzeżone, ale
+         dozwolone przy dystrybucji poza Sklepem. -->
+    <rescap:Capability Name="confirmAppClose" />
+  </Capabilities>
 </Package>

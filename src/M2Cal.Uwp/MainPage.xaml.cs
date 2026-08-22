@@ -3,13 +3,19 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Globalization;
 using System.Linq;
+using System.Threading.Tasks;
 using M2Cal.Core;
 using M2Cal.Uwp.Audio;
 using M2Cal.Uwp.ViewModels;
+using Windows.ApplicationModel;
 using Windows.Storage;
 using Windows.Storage.Pickers;
+using Windows.System;
+using Windows.UI.Core.Preview;
+using Windows.UI.ViewManagement;
 using Windows.UI.Xaml;
 using Windows.UI.Xaml.Controls;
+using Windows.UI.Xaml.Input;
 
 namespace M2Cal.Uwp
 {
@@ -24,10 +30,17 @@ namespace M2Cal.Uwp
         private readonly ObservableCollection<CalibrationPointRow> _rows = new ObservableCollection<CalibrationPointRow>();
         private readonly CalibrationFile _calibration = new CalibrationFile();
 
+        /// <summary>Adres pliku .appinstaller — ten sam, który generuje workflow wydania.</summary>
+        private const string AppInstallerUri =
+            "https://github.com/GrzegorzOle/m2cal/releases/latest/download/m2cal.appinstaller";
+
         private IReadOnlyList<RenderDeviceInfo> _devices = new List<RenderDeviceInfo>();
         private ToneSynthesizer _liveSynth;
         private bool _ready;
         private bool _suppressInvalidate;
+
+        /// <summary>Czy w mapie są pomiary, których nie zapisano do pliku.</summary>
+        private bool _dirty;
 
         /// <summary>Dolna granica regulacji. Poniżej tego poziomu bodziec ginie w szumie toru.</summary>
         private const double MinLevelDbFs = -120.0;
@@ -47,6 +60,8 @@ namespace M2Cal.Uwp
             PointsList.ItemsSource = _rows;
             _rows.CollectionChanged += (s, e) => UpdateStatus();
 
+            SystemNavigationManagerPreview.GetForCurrentView().CloseRequested += OnCloseRequested;
+
             Loaded += OnLoaded;
             Unloaded += (s, e) => _engine.Dispose();
         }
@@ -54,8 +69,13 @@ namespace M2Cal.Uwp
         private async void OnLoaded(object sender, RoutedEventArgs e)
         {
             _ready = true;
+            FullScreenButton.Content = ApplicationView.GetForCurrentView().IsFullScreenMode
+                ? "Tryb okna"
+                : "Pełny ekran";
+
             await RefreshDevicesAsync();
             UpdateStatus();
+            await CheckForUpdateAsync();
         }
 
         // ---------------------------------------------------------------- urządzenia
@@ -295,6 +315,7 @@ namespace M2Cal.Uwp
 
             _calibration.Points.Add(point);
             _rows.Add(new CalibrationPointRow(point));
+            _dirty = true;
 
             MeasuredSplBox.Text = string.Empty;
             NoteBox.Text = string.Empty;
@@ -306,6 +327,7 @@ namespace M2Cal.Uwp
 
             _calibration.Points.Remove(row.Point);
             _rows.Remove(row);
+            _dirty = true;
         }
 
         // ---------------------------------------------------------------- metadane stanowiska
@@ -480,18 +502,21 @@ namespace M2Cal.Uwp
 
         // ---------------------------------------------------------------- plik
 
-        private async void OnSaveFile(object sender, RoutedEventArgs e)
+        private async void OnSaveFile(object sender, RoutedEventArgs e) => await SaveToFileAsync();
+
+        /// <summary>Zwraca true, gdy plik faktycznie zapisano — decyduje o tym, czy wolno zamknąć okno.</summary>
+        private async Task<bool> SaveToFileAsync()
         {
             if (_calibration.Points.Count == 0)
             {
                 UpdateStatus("mapa jest pusta — nie ma czego zapisać");
-                return;
+                return false;
             }
 
             if (_engine.SampleRate == 0)
             {
                 UpdateStatus("otwórz tor przed zapisem — bez odcisku urządzenia plik jest bezużyteczny");
-                return;
+                return false;
             }
 
             // Cała ścieżka zapisu jest osłonięta, łącznie z otwarciem okna wyboru pliku.
@@ -506,19 +531,23 @@ namespace M2Cal.Uwp
                 picker.FileTypeChoices.Add("Plik kalibracyjny m2cal", new List<string> { ".json" });
 
                 StorageFile file = await picker.PickSaveFileAsync();
-                if (file == null) return;
+                if (file == null) return false;
 
                 _calibration.CreatedAtUtc = DateTime.UtcNow;
                 _calibration.Device = _engine.Fingerprint(VolumeConfirmedBox.IsChecked == true);
                 BuildMetadata();
 
                 await FileIO.WriteTextAsync(file, CalibrationStore.Serialize(_calibration));
+
+                _dirty = false;
                 UpdateStatus($"zapisano {_calibration.Points.Count} punktów do {file.Name}");
+                return true;
             }
             catch (Exception ex)
             {
                 App.Log("OnSaveFile", ex);
                 UpdateStatus($"nie udało się zapisać pliku: {ex.GetType().Name} — {ex.Message}");
+                return false;
             }
         }
 
@@ -547,6 +576,7 @@ namespace M2Cal.Uwp
                 _calibration.RefDbFs = loaded.RefDbFs;
 
                 ApplyMetadata(loaded);
+                _dirty = false;
 
                 UpdateStatus($"wczytano {_rows.Count} punktów z {file.Name}");
             }
@@ -555,6 +585,133 @@ namespace M2Cal.Uwp
                 App.Log("OnLoadFile", ex);
                 UpdateStatus($"nie udało się wczytać pliku: {ex.GetType().Name} — {ex.Message}");
             }
+        }
+
+        // ---------------------------------------------------------------- okno, zamykanie, aktualizacja
+
+        /// <summary>Przełącza pełny ekran i tryb okna — przy pracy zdalnej pasek tytułu bywa niewidoczny.</summary>
+        private void OnToggleFullScreen(object sender, RoutedEventArgs e)
+        {
+            var view = ApplicationView.GetForCurrentView();
+
+            if (view.IsFullScreenMode)
+            {
+                view.ExitFullScreenMode();
+                FullScreenButton.Content = "Pełny ekran";
+            }
+            else if (view.TryEnterFullScreenMode())
+            {
+                FullScreenButton.Content = "Tryb okna";
+            }
+        }
+
+        private async void OnEscapePressed(KeyboardAccelerator sender, KeyboardAcceleratorInvokedEventArgs args)
+        {
+            args.Handled = true;
+            await TryCloseAsync();
+        }
+
+        private async void OnExitRequested(object sender, RoutedEventArgs e) => await TryCloseAsync();
+
+        /// <summary>
+        /// Zamknięcie okna przechodzi tędy niezależnie od drogi: klawisz Esc, przycisk
+        /// „Zakończ" albo krzyżyk na pasku tytułu. Niezapisane pomiary to cała sesja
+        /// wzorcowania — zamknięcie bez pytania kasowałoby godziny pracy.
+        /// </summary>
+        private async void OnCloseRequested(object sender, SystemNavigationCloseRequestedPreviewEventArgs e)
+        {
+            if (!_dirty) return;
+
+            var deferral = e.GetDeferral();
+            try
+            {
+                e.Handled = !await ConfirmDiscardAsync();
+            }
+            finally
+            {
+                deferral.Complete();
+            }
+        }
+
+        private async Task TryCloseAsync()
+        {
+            if (_dirty && !await ConfirmDiscardAsync()) return;
+
+            _engine.Stop();
+            Application.Current.Exit();
+        }
+
+        /// <summary>Zwraca true, gdy wolno zamknąć aplikację.</summary>
+        private async Task<bool> ConfirmDiscardAsync()
+        {
+            var dialog = new ContentDialog
+            {
+                Title = "Niezapisane pomiary",
+                Content = $"W mapie jest {_rows.Count} punktów, które nie zostały zapisane do pliku. " +
+                          "Po zamknięciu przepadną.",
+                PrimaryButtonText = "Zapisz i zamknij",
+                SecondaryButtonText = "Zamknij bez zapisywania",
+                CloseButtonText = "Anuluj",
+                DefaultButton = ContentDialogButton.Primary
+            };
+
+            var wynik = await dialog.ShowAsync();
+
+            if (wynik == ContentDialogResult.Primary)
+                return await SaveToFileAsync();   // brak zapisu (anulowany wybór pliku) wstrzymuje zamknięcie
+
+            return wynik == ContentDialogResult.Secondary;
+        }
+
+        /// <summary>
+        /// Sprawdza dostępność nowszej wersji i pokazuje własny pasek. Systemowe okno
+        /// Instalatora aplikacji jest wyłączone w pliku .appinstaller, bo jego treści
+        /// i opisu przycisków nie da się zmienić.
+        /// </summary>
+        private async Task CheckForUpdateAsync()
+        {
+            try
+            {
+                var dostepnosc = await Package.Current.CheckUpdateAvailabilityAsync();
+
+                bool jest = dostepnosc.Availability == PackageUpdateAvailability.Available
+                         || dostepnosc.Availability == PackageUpdateAvailability.Required;
+
+                if (!jest) return;
+
+                UpdateText.Text = dostepnosc.Availability == PackageUpdateAvailability.Required
+                    ? "Dostępna jest wymagana aktualizacja aplikacji. Zapisz mapę przed aktualizacją."
+                    : "Dostępna jest nowsza wersja aplikacji. Zapisz mapę przed aktualizacją.";
+
+                UpdateBar.Visibility = Visibility.Visible;
+            }
+            catch (Exception ex)
+            {
+                // Brak sieci albo instalacja spoza .appinstaller — nie jest to blad pracy.
+                App.Log("CheckForUpdate", ex);
+            }
+        }
+
+        private async void OnUpdateNow(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                await Launcher.LaunchUriAsync(new Uri(AppInstallerUri));
+            }
+            catch (Exception ex)
+            {
+                App.Log("OnUpdateNow", ex);
+                UpdateStatus("nie udało się uruchomić aktualizacji: " + ex.Message);
+            }
+        }
+
+        private void OnUpdateLater(object sender, RoutedEventArgs e) =>
+            UpdateBar.Visibility = Visibility.Collapsed;
+
+        private static string CurrentVersion()
+        {
+            var v = Package.Current.Id.Version;
+            return $"{v.Major}.{v.Minor}.{v.Build}.{v.Revision}";
         }
 
         // ---------------------------------------------------------------- stan
@@ -617,9 +774,13 @@ namespace M2Cal.Uwp
 
             if (!string.IsNullOrEmpty(message)) parts.Add(message);
 
+            // Wersja aplikacji jest widoczna stale: aktualizacja podmienia kod syntezy bodzca,
+            // a operator musi wiedziec, ktora wersja prowadzil sesje.
+            parts.Add("wersja " + CurrentVersion());
+
             parts.Add(_rows.Count == 0
                 ? "mapa jest pusta"
-                : $"punktów w mapie: {_rows.Count}");
+                : $"punktów w mapie: {_rows.Count}" + (_dirty ? " (niezapisane)" : ""));
 
             var missing = new List<string>();
             if (VolumeConfirmedBox.IsChecked != true) missing.Add("potwierdzenia głośności endpointu");

@@ -162,9 +162,11 @@ jobs:
           dotnet run --project src/M2Cal.Cli -- example --out (Join-Path $wydanie 'wzorzec-pliku-kalibracyjnego.json')
           if ($LASTEXITCODE -ne 0) { throw 'Nie udalo sie wygenerowac wzorca pliku kalibracyjnego.' }
 
-          # Plik .appinstaller pozwala Instalatorowi aplikacji sprawdzac przy kazdym starcie,
-          # czy jest nowsza wersja. Monit jest wlaczony swiadomie: zmiana syntezy bodzcow
-          # uniewaznia kalibracje, wiec operator ma sie dowiedziec o podmianie wersji.
+          # Plik .appinstaller pozwala sprawdzac przy kazdym starcie, czy jest nowsza wersja.
+          # Systemowy monit jest wylaczony (ShowPrompt="false"), bo jego tresci ani opisow
+          # przyciskow nie da sie zmienic. Aplikacja pokazuje wlasny pasek z przyciskiem
+          # "Aktualizuj" i wyswietla numer wersji, wiec podmiana kodu syntezy bodzca nie
+          # przejdzie niezauwazona przez operatora.
           $bazowy = '${{ github.server_url }}/${{ github.repository }}/releases/latest/download'
           $wersja = '${{ steps.wersja.outputs.version }}'
           [xml] $manifest = Get-Content 'src/M2Cal.Uwp/Package.appxmanifest'
@@ -184,7 +186,7 @@ jobs:
             '      ProcessorArchitecture="x64"'
             "      Uri=`"$bazowy/$nazwaMsix`" />"
             '  <UpdateSettings>'
-            '    <OnLaunch HoursBetweenUpdateChecks="0" ShowPrompt="true" />'
+            '    <OnLaunch HoursBetweenUpdateChecks="0" ShowPrompt="false" />'
             '  </UpdateSettings>'
             '</AppInstaller>'
           )

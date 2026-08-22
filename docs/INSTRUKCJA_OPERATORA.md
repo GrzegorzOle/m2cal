@@ -35,6 +35,33 @@ przypomina, że poniżej są dalsze pola.
 
 ---
 
+## Okno programu
+
+Aplikacja startuje na pełnym ekranie — mapa mieści wtedy komplet punktów bez
+przewijania.
+
+| Element | Działanie |
+| --- | --- |
+| **Tryb okna** (prawy górny róg) | Przełącza pełny ekran ↔ okno. Przy pracy zdalnej pasek tytułu bywa niewidoczny i bez tego przycisku nie da się zmienić rozmiaru okna. |
+| **Zakończ** | Zamyka program. |
+| Klawisz **Esc** | To samo co „Zakończ". |
+
+Jeśli w mapie są pomiary, których nie zapisano do pliku, program **zapyta przed
+zamknięciem** i pozwoli zapisać. Dotyczy to każdej drogi wyjścia — przycisku,
+klawisza Esc i krzyżyka na pasku tytułu.
+
+Na pasku stanu, na dole okna, stale widoczny jest **numer wersji aplikacji**.
+Zapisz go w dokumentacji sesji: zmiana wersji syntezy bodźców unieważnia
+kalibrację, więc trzeba wiedzieć, którą wersją prowadzono wzorcowanie.
+
+## Aktualizacja
+
+Gdy dostępna jest nowsza wersja, u góry okna pojawia się pasek z przyciskami
+**Aktualizuj** i **Później**.
+
+**Zapisz mapę przed aktualizacją** — aktualizacja zamyka program. Po niej sprawdź
+numer wersji na pasku stanu.
+
 ## TOR AUDIO (góra okna)
 
 | Pole | Co wpisać |
@@ -50,10 +77,30 @@ Te wartości trafiają do pliku jako odcisk toru.
 | Pole | Jednostka | Co wpisać |
 | --- | --- | --- |
 | **Częstotliwość** | Hz | Częstotliwość nośna. Dowolna wartość dodatnia. |
-| **Poziom sygnału** | dBFS | Poziom podawany na wyjście. Zawsze ujemny; `0` to pełna skala. Przyciski `−5 / −1 / +1 / +5` zmieniają go krokowo, zakres −120…0. |
+| **Poziom sygnału** | dBFS | Poziom podawany na wyjście, patrz niżej. Przyciski `−5 / −1 / +1 / +5` zmieniają go krokowo, zakres −120…0. |
 | **Kanał** | — | `L` albo `P`. Drugi kanał jest cyfrową ciszą. |
 | **pulsowany** | — | Bodziec przerywany — taki, jakiego używa test przesiewowy. |
 | **wobbulowany** | — | Modulacja częstotliwości. Stosowana w polu swobodnym, **nie** przy wzorcowaniu w słuchawkach. |
+
+### Skala dBFS
+
+Skala jest odniesiona do pełnej skali cyfrowej i **nigdy nie przekracza zera**:
+
+```
+   0 dBFS  maksimum — sinus wypełniający całą skalę
+  -6 dBFS  połowa amplitudy
+ -20 dBFS  typowy ton odniesienia przy wzorcowaniu
+ -67 dBFS  przykładowy poziom przesiewowy 20 dB HL
+-120 dBFS  dolna granica regulacji
+```
+
+Im bardziej ujemna liczba, tym ciszej. Każde **−6 dB to połowa amplitudy**, każde
+**−20 dB to jedna dziesiąta**.
+
+**Nie wzorcuj przy 0 dBFS.** Pełna skala nie zostawia zapasu i każda nieliniowość
+toru objawia się przesterowaniem. Ton odniesienia stawia się niżej — domyślnie
+−20 dBFS — i z niego wynika czułość toru. Poziomy badania wypadają i tak głęboko
+poniżej, bo cała regulacja odbywa się cyfrowo, a nie głośnością systemową.
 
 **Graj / Stop** — ton brzmi nieprzerwanie aż do zatrzymania, żeby miernik zdążył
 się ustabilizować.
